@@ -1924,18 +1924,12 @@ static int __init ipv4_offload_init(void)
 
 fs_initcall(ipv4_offload_init);
 
-/* 自分 */
+/* disable the existing stack */
 #ifdef ENABLE_LINUX_STACK
 	static struct packet_type ip_packet_type __read_mostly = {
 		.type = cpu_to_be16(ETH_P_IP),
 		.func = ip_rcv,
 		.list_func = ip_list_rcv,
-	};
-#else
-	static struct packet_type my_ip_packet_type __read_mostly = {
-		.type = cpu_to_be16(ETH_P_IP),
-		.func = my_ip_rcv,
-		.list_func = my_ip_list_rcv,
 	};
 #endif
 
@@ -2008,11 +2002,9 @@ static int __init inet_init(void)
 	 *	Set the IP module up
 	 */
 
-    /* 自分 */
+    /* disable the existing stack */
 #ifdef ENABLE_LINUX_STACK
 	ip_init();
-#else
-    my_ip_init();
 #endif
 
 	/* Initialise per-cpu ipv4 mibs */
@@ -2054,11 +2046,9 @@ static int __init inet_init(void)
 
 	ipfrag_init();
 
-	/* 自分 */
+	/* disable the existing stack */
 #ifdef ENABLE_LINUX_STACK
 	dev_add_pack(&ip_packet_type);
-#else 
-    dev_add_pack(&my_ip_packet_type);
 #endif
 
 	dev_add_pack(&ip_packet_type);
@@ -2077,7 +2067,7 @@ out_unregister_tcp_proto:
 	goto out;
 }
 
-	/* 自分 */
+	/* disable the existing stack */
 #ifdef ENABLE_LINUX_STACK
 	fs_initcall(inet_init);
 #endif

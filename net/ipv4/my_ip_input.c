@@ -145,7 +145,7 @@
 /*
  * 	Main IP Receive routine.
  */
-int my_ip_rcv_core(struct sk_buff *skb)
+int ip_rcv_core(struct sk_buff *skb)
 {
 	struct iphdr *iph;
 
@@ -170,14 +170,15 @@ int my_ip_rcv_core(struct sk_buff *skb)
  */
 int ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev)
 {
-	skb = ip_rcv_core(skb);
+	int drop_reason;
 
-	if (skb == NULL)
-		kfree_skb_reason(skb, drop_reason);
+	skb = ip_rcv_core(skb);
 
 	/* とりあえずここまでパスした場合はダンプしておく */
 	printk(KERN_INFO "packet from ip_rcv(): %pa\n", skb);
 
+	drop_reason = SKB_DROP_REASON_NOT_SPECIFIED;
+	kfree_skb_reason(skb, drop_reason);
 }
 
 static void ip_sublist_rcv_finish(struct list_head *head)
@@ -186,7 +187,6 @@ static void ip_sublist_rcv_finish(struct list_head *head)
 
 	list_for_each_entry_safe(skb, next, head, list) {
 		skb_list_del_init(skb);
-		dst_input(skb);
 	}
 }
 
@@ -199,7 +199,6 @@ static void ip_list_rcv_finish(struct net *net, struct sock *sk,
 	INIT_LIST_HEAD(&sublist);
 	list_for_each_entry_safe(skb, next, head, list) {
 		struct net_device *dev = skb->dev;
-		// struct dst_entry *dst;
 
 		skb_list_del_init(skb);
 		/* if ingress device is enslaved to an L3 master device pass the
@@ -208,11 +207,6 @@ static void ip_list_rcv_finish(struct net *net, struct sock *sk,
 		skb = l3mdev_ip_rcv(skb);
 		if (!skb)
 			continue;
-
-		skb = ip_rcv_core(skb);
-
-		if (skb == NULL)
-			kfree_skb_reason(skb, drop_reason);
 
 		/* とりあえずここまでパスした場合はダンプしておく */
 		printk(KERN_INFO "packet from ip_list_rcv(): %pa\n", skb);
@@ -233,8 +227,8 @@ static void ip_sublist_rcv(struct list_head *head, struct net_device *dev,
 void ip_list_rcv(struct list_head *head, struct packet_type *pt,
 		 struct net_device *orig_dev)
 {
-	struct net_device *curr_dev = NULL;
-	struct net *curr_net = NULL;
+	// struct net_device *curr_dev = NULL;
+	// struct net *curr_net = NULL;
 	struct sk_buff *skb, *next;
 	struct list_head sublist;
 
@@ -248,15 +242,15 @@ void ip_list_rcv(struct list_head *head, struct packet_type *pt,
 		if (skb == NULL)
 			continue;
 
-		if (curr_dev != dev || curr_net != net) {
-			/* dispatch old sublist */
-			if (!list_empty(&sublist))
-				ip_sublist_rcv(&sublist, curr_dev, curr_net);
-			/* start new sublist */
-			INIT_LIST_HEAD(&sublist);
-			curr_dev = dev;
-			curr_net = net;
-		}
+		// if (curr_dev != dev || curr_net != net) {
+		// 	/* dispatch old sublist */
+		// 	if (!list_empty(&sublist))
+		// 		ip_sublist_rcv(&sublist, curr_dev, curr_net);
+		// 	/* start new sublist */
+		// 	INIT_LIST_HEAD(&sublist);
+		// 	curr_dev = dev;
+		// 	curr_net = net;
+		// }
 		list_add_tail(&skb->list, &sublist);
 	}
 	/* dispatch final sublist */
