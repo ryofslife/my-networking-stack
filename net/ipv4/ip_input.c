@@ -557,7 +557,6 @@ out:
 /*
  * IP receive entry point
  */
-/* 関数 */
 int ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt,
 	   struct net_device *orig_dev)
 {
@@ -640,7 +639,6 @@ static void ip_sublist_rcv(struct list_head *head, struct net_device *dev,
 }
 
 /* Receive a list of IP packets */
-/* 関数 */
 void ip_list_rcv(struct list_head *head, struct packet_type *pt,
 		 struct net_device *orig_dev)
 {

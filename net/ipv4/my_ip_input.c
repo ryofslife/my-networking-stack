@@ -176,7 +176,7 @@ int ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, 
 		kfree_skb_reason(skb, drop_reason);
 
 	/* とりあえずここまでパスした場合はダンプしておく */
-	printk(KERN_INFO "Address of received packet: %pa\n", skb);
+	printk(KERN_INFO "packet from ip_rcv(): %pa\n", skb);
 
 }
 
@@ -190,26 +190,16 @@ static void ip_sublist_rcv_finish(struct list_head *head)
 	}
 }
 
-static struct sk_buff *ip_extract_route_hint(const struct net *net,
-					     struct sk_buff *skb, int rt_type)
-{
-	if (fib4_has_custom_rules(net) || rt_type == RTN_BROADCAST)
-		return NULL;
-
-	return skb;
-}
-
 static void ip_list_rcv_finish(struct net *net, struct sock *sk,
 			       struct list_head *head)
 {
 	struct sk_buff *skb, *next, *hint = NULL;
-	struct dst_entry *curr_dst = NULL;
 	struct list_head sublist;
 
 	INIT_LIST_HEAD(&sublist);
 	list_for_each_entry_safe(skb, next, head, list) {
 		struct net_device *dev = skb->dev;
-		struct dst_entry *dst;
+		// struct dst_entry *dst;
 
 		skb_list_del_init(skb);
 		/* if ingress device is enslaved to an L3 master device pass the
@@ -218,21 +208,15 @@ static void ip_list_rcv_finish(struct net *net, struct sock *sk,
 		skb = l3mdev_ip_rcv(skb);
 		if (!skb)
 			continue;
-		if (ip_rcv_finish_core(net, sk, skb, dev, hint) == NET_RX_DROP)
-			continue;
 
-		dst = skb_dst(skb);
-		if (curr_dst != dst) {
-			hint = ip_extract_route_hint(net, skb,
-					       ((struct rtable *)dst)->rt_type);
+		skb = ip_rcv_core(skb);
 
-			/* dispatch old sublist */
-			if (!list_empty(&sublist))
-				ip_sublist_rcv_finish(&sublist);
-			/* start new sublist */
-			INIT_LIST_HEAD(&sublist);
-			curr_dst = dst;
-		}
+		if (skb == NULL)
+			kfree_skb_reason(skb, drop_reason);
+
+		/* とりあえずここまでパスした場合はダンプしておく */
+		printk(KERN_INFO "packet from ip_list_rcv(): %pa\n", skb);
+
 		list_add_tail(&skb->list, &sublist);
 	}
 	/* dispatch final sublist */
@@ -242,13 +226,10 @@ static void ip_list_rcv_finish(struct net *net, struct sock *sk,
 static void ip_sublist_rcv(struct list_head *head, struct net_device *dev,
 			   struct net *net)
 {
-	NF_HOOK_LIST(NFPROTO_IPV4, NF_INET_PRE_ROUTING, net, NULL,
-		     head, dev, NULL, ip_rcv_finish);
 	ip_list_rcv_finish(net, NULL, head);
 }
 
 /* Receive a list of IP packets */
-/* 関数 */
 void ip_list_rcv(struct list_head *head, struct packet_type *pt,
 		 struct net_device *orig_dev)
 {
@@ -282,3 +263,4 @@ void ip_list_rcv(struct list_head *head, struct packet_type *pt,
 	if (!list_empty(&sublist))
 		ip_sublist_rcv(&sublist, curr_dev, curr_net);
 }
+

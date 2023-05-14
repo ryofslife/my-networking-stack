@@ -2077,8 +2077,10 @@ out_unregister_tcp_proto:
 	goto out;
 }
 
-fs_initcall(inet_init);
-
+	/* 自分 */
+#ifdef ENABLE_LINUX_STACK
+	fs_initcall(inet_init);
+#endif
 /* ------------------------------------------------------------------------ */
 
 #ifdef CONFIG_PROC_FS
