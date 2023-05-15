@@ -180,7 +180,7 @@ int my_ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *p
 	drop_reason = SKB_DROP_REASON_NOT_SPECIFIED;
 	kfree_skb_reason(skb, drop_reason);
 
-	return 0
+	return 0;
 
 }
 
@@ -229,8 +229,8 @@ static void ip_sublist_rcv(struct list_head *head, struct net_device *dev,
 void my_ip_list_rcv(struct list_head *head, struct packet_type *pt,
 		 struct net_device *orig_dev)
 {
-	// struct net_device *curr_dev = NULL;
-	// struct net *curr_net = NULL;
+	struct net_device *curr_dev = NULL;
+	struct net *curr_net = NULL;
 	struct sk_buff *skb, *next;
 	struct list_head sublist;
 
