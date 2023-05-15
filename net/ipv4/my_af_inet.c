@@ -124,7 +124,7 @@
 #include </net/my_stack.h>
 
 
-static struct packet_type my_ip_packet_type __read_mostly = {
+static struct packet_type ip_packet_type __read_mostly = {
     .type = cpu_to_be16(ETH_P_IP),
     .func = my_ip_rcv,
     .list_func = my_ip_list_rcv,
@@ -135,7 +135,7 @@ static int __init inet_init(void)
 
     /* my_ip_init(); */
 
-    dev_add_pack(&my_ip_packet_type);
+    dev_add_pack(&ip_packet_type);
 
 }
 

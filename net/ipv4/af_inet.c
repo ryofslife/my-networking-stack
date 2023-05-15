@@ -2051,8 +2051,6 @@ static int __init inet_init(void)
 	dev_add_pack(&ip_packet_type);
 #endif
 
-	dev_add_pack(&ip_packet_type);
-
 	ip_tunnel_core_init();
 
 	rc = 0;
