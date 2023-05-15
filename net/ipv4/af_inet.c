@@ -121,7 +121,7 @@
 
 #include <trace/events/sock.h>
 
-#include </net/my_stack.h>
+// #include </net/my_stack.h>
 
 /* The inetsw table contains everything that inet_create needs to
  * build a new socket.
