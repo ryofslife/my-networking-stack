@@ -168,7 +168,7 @@ static struct sk_buff *ip_rcv_core(struct sk_buff *skb)
 /*
  * IP receive entry point
  */
-int ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev)
+int my_ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, struct net_device *orig_dev)
 {
 	int drop_reason;
 
@@ -226,7 +226,7 @@ static void ip_sublist_rcv(struct list_head *head, struct net_device *dev,
 }
 
 /* Receive a list of IP packets */
-void ip_list_rcv(struct list_head *head, struct packet_type *pt,
+void my_ip_list_rcv(struct list_head *head, struct packet_type *pt,
 		 struct net_device *orig_dev)
 {
 	// struct net_device *curr_dev = NULL;

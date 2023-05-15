@@ -133,7 +133,7 @@ static struct packet_type my_ip_packet_type __read_mostly = {
 static int __init inet_init(void)
 {
 
-    my_ip_init();
+    /* my_ip_init(); */
 
     dev_add_pack(&my_ip_packet_type);
 
