@@ -145,12 +145,12 @@
 /*
  * 	Main IP Receive routine.
  */
-int ip_rcv_core(struct sk_buff *skb)
+static struct sk_buff *ip_rcv_core(struct sk_buff *skb)
 {
+	int drop_reason;
 	struct iphdr *iph;
 
     iph = ip_hdr(skb);
-    int drop_reason;
 
 	/* ipヘッダのプロトコルに応じてパケットを落とす */
 	if (iph->protocol != IPPROTO_ICMP) {
@@ -158,11 +158,11 @@ int ip_rcv_core(struct sk_buff *skb)
 		goto drop;
     }
 
-    return skb;
-
     drop:
         kfree_skb_reason(skb, drop_reason);
 
+	return skb;
+	
 }
 
 /*
@@ -179,6 +179,9 @@ int ip_rcv(struct sk_buff *skb, struct net_device *dev, struct packet_type *pt, 
 
 	drop_reason = SKB_DROP_REASON_NOT_SPECIFIED;
 	kfree_skb_reason(skb, drop_reason);
+
+	return 0
+
 }
 
 static void ip_sublist_rcv_finish(struct list_head *head)
@@ -193,12 +196,11 @@ static void ip_sublist_rcv_finish(struct list_head *head)
 static void ip_list_rcv_finish(struct net *net, struct sock *sk,
 			       struct list_head *head)
 {
-	struct sk_buff *skb, *next, *hint = NULL;
+	struct sk_buff *skb, *next = NULL;
 	struct list_head sublist;
 
 	INIT_LIST_HEAD(&sublist);
 	list_for_each_entry_safe(skb, next, head, list) {
-		struct net_device *dev = skb->dev;
 
 		skb_list_del_init(skb);
 		/* if ingress device is enslaved to an L3 master device pass the
@@ -238,19 +240,19 @@ void ip_list_rcv(struct list_head *head, struct packet_type *pt,
 		struct net *net = dev_net(dev);
 
 		skb_list_del_init(skb);
-		skb = ip_rcv_core(skb, net);
+		skb = ip_rcv_core(skb);
 		if (skb == NULL)
 			continue;
 
-		// if (curr_dev != dev || curr_net != net) {
-		// 	/* dispatch old sublist */
-		// 	if (!list_empty(&sublist))
-		// 		ip_sublist_rcv(&sublist, curr_dev, curr_net);
-		// 	/* start new sublist */
-		// 	INIT_LIST_HEAD(&sublist);
-		// 	curr_dev = dev;
-		// 	curr_net = net;
-		// }
+		if (curr_dev != dev || curr_net != net) {
+			/* dispatch old sublist */
+			if (!list_empty(&sublist))
+				ip_sublist_rcv(&sublist, curr_dev, curr_net);
+			/* start new sublist */
+			INIT_LIST_HEAD(&sublist);
+			curr_dev = dev;
+			curr_net = net;
+		}
 		list_add_tail(&skb->list, &sublist);
 	}
 	/* dispatch final sublist */
