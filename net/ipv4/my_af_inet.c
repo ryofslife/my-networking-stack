@@ -136,8 +136,7 @@ static int __init inet_init(void)
     dev_add_pack(&ip_packet_type);
 
     return 0;
-    
+
 }
 
 fs_initcall(inet_init);
-

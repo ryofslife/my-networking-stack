@@ -203,15 +203,11 @@ static void ip_list_rcv_finish(struct net *net, struct sock *sk,
 	list_for_each_entry_safe(skb, next, head, list) {
 
 		skb_list_del_init(skb);
-		/* if ingress device is enslaved to an L3 master device pass the
-		 * skb to its handler for processing
-		 */
-		skb = l3mdev_ip_rcv(skb);
 		if (!skb)
 			continue;
 
 		/* とりあえずここまでパスした場合はダンプしておく */
-		printk(KERN_INFO "packet from ip_list_rcv(): %pa\n", skb);
+		printk(KERN_INFO "packet from ip_list_rcv(): %pa\n", &skb);
 
 		list_add_tail(&skb->list, &sublist);
 	}
