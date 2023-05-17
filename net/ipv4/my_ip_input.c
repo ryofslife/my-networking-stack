@@ -198,6 +198,7 @@ static void ip_list_rcv_finish(struct net *net, struct sock *sk,
 {
 	struct sk_buff *skb, *next = NULL;
 	struct list_head sublist;
+	struct iphdr *iph;
 
 	INIT_LIST_HEAD(&sublist);
 	list_for_each_entry_safe(skb, next, head, list) {
@@ -208,6 +209,12 @@ static void ip_list_rcv_finish(struct net *net, struct sock *sk,
 
 		/* とりあえずここまでパスした場合はダンプしておく */
 		printk(KERN_INFO "packet from ip_list_rcv(): %pa\n", &skb);
+
+		/* L3 src/dstを取得する */
+		iph = ip_hdr(skb);
+
+		printk(KERN_INFO "Source Address: %08x\n", iph->saddr);
+		printk(KERN_INFO "Destination Address   : %08x\n", iph->daddr);
 
 		list_add_tail(&skb->list, &sublist);
 	}
