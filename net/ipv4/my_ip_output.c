@@ -38,7 +38,7 @@
 #include <linux/netlink.h>
 #include <linux/tcp.h>
 
-static void ip_if_init()
+static int ip_if_init(void)
 {
 	struct net_device *dev;
 	

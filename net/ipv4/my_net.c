@@ -46,7 +46,8 @@ int net_device_add_iface(struct net_device *dev)
 	printk(KERN_INFO "net_device_add_iface(): resgistering %s\n", dev->name);
 	printk(KERN_INFO "net_device_add_iface(): irq with %u\n", dev->irq);
 	printk(KERN_INFO "net_device_add_iface(): type of %u\n", dev->type);
-	printk(KERN_INFO "net_device_add_iface(): hw address(u) of %u\n", dev->dev_addr);
+	// %uはダメらしい
+	// printk(KERN_INFO "net_device_add_iface(): hw address(u) of %u\n", dev->dev_addr);
 	printk(KERN_INFO "net_device_add_iface(): hw address(pM) of %pM\n", dev->dev_addr);
 	
 	return 0;
