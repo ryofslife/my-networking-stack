@@ -1,66 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0-or-later
-/*
- * INET		An implementation of the TCP/IP protocol suite for the LINUX
- *		operating system.  INET is implemented using the  BSD Socket
- *		interface as the means of communication with the user level.
- *
- *		PF_INET protocol family socket handler.
- *
- * Authors:	Ross Biro
- *		Fred N. van Kempen, <waltje@uWalt.NL.Mugnet.ORG>
- *		Florian La Roche, <flla@stud.uni-sb.de>
- *		Alan Cox, <A.Cox@swansea.ac.uk>
- *
- * Changes (see also sock.c)
- *
- *		piggy,
- *		Karl Knutson	:	Socket protocol table
- *		A.N.Kuznetsov	:	Socket death error in accept().
- *		John Richardson :	Fix non blocking error in connect()
- *					so sockets that fail to connect
- *					don't return -EINPROGRESS.
- *		Alan Cox	:	Asynchronous I/O support
- *		Alan Cox	:	Keep correct socket pointer on sock
- *					structures
- *					when accept() ed
- *		Alan Cox	:	Semantics of SO_LINGER aren't state
- *					moved to close when you look carefully.
- *					With this fixed and the accept bug fixed
- *					some RPC stuff seems happier.
- *		Niibe Yutaka	:	4.4BSD style write async I/O
- *		Alan Cox,
- *		Tony Gale 	:	Fixed reuse semantics.
- *		Alan Cox	:	bind() shouldn't abort existing but dead
- *					sockets. Stops FTP netin:.. I hope.
- *		Alan Cox	:	bind() works correctly for RAW sockets.
- *					Note that FreeBSD at least was broken
- *					in this respect so be careful with
- *					compatibility tests...
- *		Alan Cox	:	routing cache support
- *		Alan Cox	:	memzero the socket structure for
- *					compactness.
- *		Matt Day	:	nonblock connect error handler
- *		Alan Cox	:	Allow large numbers of pending sockets
- *					(eg for big web sites), but only if
- *					specifically application requested.
- *		Alan Cox	:	New buffering throughout IP. Used
- *					dumbly.
- *		Alan Cox	:	New buffering now used smartly.
- *		Alan Cox	:	BSD rather than common sense
- *					interpretation of listen.
- *		Germano Caronni	:	Assorted small races.
- *		Alan Cox	:	sendmsg/recvmsg basic support.
- *		Alan Cox	:	Only sendmsg/recvmsg now supported.
- *		Alan Cox	:	Locked down bind (see security list).
- *		Alan Cox	:	Loosened bind a little.
- *		Mike McLagan	:	ADD/DEL DLCI Ioctls
- *	Willy Konynenberg	:	Transparent proxying support.
- *		David S. Miller	:	New socket lookup architecture.
- *					Some other random speedups.
- *		Cyrus Durgin	:	Cleaned up file for kmod hacks.
- *		Andi Kleen	:	Fix inet_stream_connect TCP race.
- */
-
 #define pr_fmt(fmt) "IPv4: " fmt
 
 #include <linux/err.h>
@@ -131,8 +68,13 @@ static struct packet_type ip_packet_type __read_mostly = {
 static int __init inet_init(void)
 {
 
-    /* my_ip_init(); */
+    /* initialize my ip stack */
+	if (my_ip_init() == -1) {
+		printk("error initializing my_ip_init()");
+		return -1;
+    }
 
+	// register rcv handlers for ip stack
     dev_add_pack(&ip_packet_type);
 
     return 0;
