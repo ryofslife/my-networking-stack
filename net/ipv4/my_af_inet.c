@@ -70,7 +70,7 @@ static int __init inet_init(void)
 
     /* initialize my ip stack */
 	if (my_ip_init() == -1) {
-		printk("error initializing my_ip_init()");
+		printk("error initializing my_ip_init()\n");
 		return -1;
     }
 

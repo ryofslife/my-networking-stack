@@ -46,14 +46,14 @@ static void ip_if_init()
 	
 	if (dev == NULL) 
 	{
-		printk("ip_if_init(): could't get the info on eth0");
+		printk("ip_if_init(): could't get the info on eth0\n");
 		return -1;
     }
 	
 	// eth0のnet_deviceを取得できたら仮想IFに渡してIPIFと紐づける
 	if (net_device_add_iface(dev) == 0) 
 	{
-		printk("ip_if_init(): successfully added eth0 to VIF");
+		printk("ip_if_init(): successfully added eth0 to VIF\n");
     }
 	
 	return 0;

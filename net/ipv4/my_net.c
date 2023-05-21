@@ -43,10 +43,11 @@
 // 仮想IF(net_iface)に対してnet_ifaceに対して仮想デバイスを登録する
 int net_device_add_iface(struct net_device *dev)
 {
-	printk(KERN_INFO "net_device_add_iface(): resgistering %d", dev->name);
-	printk(KERN_INFO "net_device_add_iface(): irq with %u", dev->irq);
-	printk(KERN_INFO "net_device_add_iface(): type of %u", dev->type);
-	printk(KERN_INFO "net_device_add_iface(): hw address of %d", dev->name);
+	printk(KERN_INFO "net_device_add_iface(): resgistering %s\n", dev->name);
+	printk(KERN_INFO "net_device_add_iface(): irq with %u\n", dev->irq);
+	printk(KERN_INFO "net_device_add_iface(): type of %u\n", dev->type);
+	printk(KERN_INFO "net_device_add_iface(): hw address(u) of %u\n", dev->dev_addr);
+	printk(KERN_INFO "net_device_add_iface(): hw address(pM) of %pM\n", dev->dev_addr);
 	
 	return 0;
 }
