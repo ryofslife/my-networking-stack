@@ -40,21 +40,23 @@
 
 static int ip_if_init(void)
 {
-	struct net_device *dev;
+	// struct net_device *dev;
 	
-	dev = dev_get_by_name(&init_net, "eth0");
+	// dev = dev_get_by_name(&init_net, "eth0");
 	
-	if (dev == NULL) 
-	{
-		printk("ip_if_init(): could't get the info on eth0\n");
-		return -1;
-    }
+	// if (dev == NULL) 
+	// {
+		// printk("ip_if_init(): could't get the info on eth0\n");
+		// return -1;
+    // }
 	
-	// eth0のnet_deviceを取得できたら仮想IFに渡してIPIFと紐づける
-	if (net_device_add_iface(dev) == 0) 
-	{
-		printk("ip_if_init(): successfully added eth0 to VIF\n");
-    }
+	// // eth0のnet_deviceを取得できたら仮想IFに渡してIPIFと紐づける
+	// if (net_device_add_iface(dev) == 0) 
+	// {
+		// printk("ip_if_init(): successfully added ip interface to eth0\n");
+    // }
+	
+	printk("ip_if_init(): ip stack successfully initialized\n");
 	
 	return 0;
 }

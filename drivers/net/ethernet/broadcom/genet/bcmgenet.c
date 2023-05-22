@@ -24,6 +24,7 @@
 #include <linux/pm.h>
 #include <linux/clk.h>
 #include <net/arp.h>
+#include <net/ip.h>
 
 #include <linux/mii.h>
 #include <linux/ethtool.h>
@@ -4021,6 +4022,15 @@ static int bcmgenet_probe(struct platform_device *pdev)
 	if (!dev) {
 		dev_err(&pdev->dev, "can't allocate net device\n");
 		return -ENOMEM;
+	}
+	
+	// if alloc_etherdev_mqs() was successful, eth0 is ready
+	// add ip interface to eth0
+	if (net_device_add_iface(dev) == -1) 
+	{
+		printk("bcmgenet_probe(): failed adding ip interface to eth0\n");
+    } else {
+		printk("bcmgenet_probe(): successfully added ip interface to eth0\n");
 	}
 
 	priv = netdev_priv(dev);
