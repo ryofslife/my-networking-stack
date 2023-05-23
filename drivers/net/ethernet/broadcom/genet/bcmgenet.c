@@ -4023,15 +4023,6 @@ static int bcmgenet_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "can't allocate net device\n");
 		return -ENOMEM;
 	}
-	
-	// if alloc_etherdev_mqs() was successful, eth0 is ready
-	// add ip interface to eth0
-	if (net_device_add_iface(dev) == -1) 
-	{
-		printk("bcmgenet_probe(): failed adding ip interface to eth0\n");
-    } else {
-		printk("bcmgenet_probe(): successfully added ip interface to eth0\n");
-	}
 
 	priv = netdev_priv(dev);
 	priv->irq0 = platform_get_irq(pdev, 0);
@@ -4197,6 +4188,15 @@ static int bcmgenet_probe(struct platform_device *pdev)
 	if (err) {
 		bcmgenet_mii_exit(dev);
 		goto err;
+	}
+	
+	// if register_netdev() was successful, eth0 is ready
+	// add ip interface to eth0
+	if (net_device_add_iface(dev) == -1) 
+	{
+		printk("bcmgenet_probe(): failed adding ip interface to eth0\n");
+    } else {
+		printk("bcmgenet_probe(): successfully added ip interface to eth0\n");
 	}
 
 	return err;
