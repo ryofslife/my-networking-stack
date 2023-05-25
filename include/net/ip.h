@@ -37,6 +37,15 @@
 #define IPV4_MAX_PMTU		65535U		/* RFC 2675, Section 5.1 */
 #define IPV4_MIN_MTU		68			/* RFC 791 */
 
+// my struct
+struct ip_iface {
+    struct ip_iface *next;
+    uint32_t unicast;
+    uint32_t netmask;
+    uint32_t broadcast;
+	n3t_device *dev
+};
+
 extern unsigned int sysctl_fib_sync_mem;
 extern unsigned int sysctl_fib_sync_mem_min;
 extern unsigned int sysctl_fib_sync_mem_max;
@@ -214,7 +223,8 @@ int ip_local_out(struct net *net, struct sock *sk, struct sk_buff *skb);
 int __ip_queue_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 		    __u8 tos);
 int __init my_ip_init(void); // my func
-int net_device_add_iface(struct net_device *dev); // my func
+int add_n3t_device(struct net_device *dev); // my func
+int n3t_device_add_ip_iface(char dev_name, struct ip_iface *ipif); // my func
 void ip_init(void);
 int ip_append_data(struct sock *sk, struct flowi4 *fl4,
 		   int getfrag(void *from, char *to, int offset, int len,

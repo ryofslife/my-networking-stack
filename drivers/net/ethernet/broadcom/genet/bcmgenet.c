@@ -4190,13 +4190,29 @@ static int bcmgenet_probe(struct platform_device *pdev)
 		goto err;
 	}
 	
-	// if register_netdev() was successful, eth0 is ready
-	// add ip interface to eth0
-	if (net_device_add_iface(dev) == -1) 
+	// register_netdev()==0の場合は仮想デバイスの登録も完了している
+	// *devからMACアドレス等必要な情報を取得する
+	if (add_n3t_device(dev) == 0) 
 	{
-		printk("bcmgenet_probe(): failed adding ip interface to eth0\n");
+		printk("bcmgenet_probe(): successfully added eth0 to the device list\n");
+		
+		// とりあえずここでip_ifaceを初期化してn3t_device_add_ip_iface()に渡す、後でkernel moduleとかで投入できるようにする
+		// struct ip_ifaceについてはnet/ip.hに定義しておく
+		struct ip_iface *ipif;
+		ipif = memory_alloc(sizeof(*ipif));
+		ipif->unicast = 3232238083;
+		ipif->netmask = 4294967040;
+		ipif->broadcast = 4294967295;
+		
+		if (n3t_device_add_ip_iface(dev->name, ipif) == 0)
+		{
+			printk("bcmgenet_probe(): successfully added ip interface to eth0\n");
+		} else {
+			printk("bcmgenet_probe(): failed adding ip interface to eth0\n");
+		}
+
     } else {
-		printk("bcmgenet_probe(): successfully added ip interface to eth0\n");
+		printk("bcmgenet_probe(): failed adding eth0 to the device list\n");
 	}
 
 	return err;

@@ -75,6 +75,13 @@ struct udp_tunnel_nic;
 struct bpf_prog;
 struct xdp_buff;
 
+// my struct
+struct n3t_device {
+    struct n3t_device *next;
+    char dev_name[10];
+    u_int8_t  dev_addr[ETH_ALEN];
+};
+
 void synchronize_net(void);
 void netdev_set_default_ethtool_ops(struct net_device *dev,
 				    const struct ethtool_ops *ops);
