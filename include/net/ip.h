@@ -37,13 +37,15 @@
 #define IPV4_MAX_PMTU		65535U		/* RFC 2675, Section 5.1 */
 #define IPV4_MIN_MTU		68			/* RFC 791 */
 
+#include <linux/netdevice.h>
+
 // my struct
 struct ip_iface {
     struct ip_iface *next;
     uint32_t unicast;
     uint32_t netmask;
     uint32_t broadcast;
-	n3t_device *dev
+	n3t_device *dev;
 };
 
 extern unsigned int sysctl_fib_sync_mem;
