@@ -45,7 +45,7 @@ struct ip_iface {
     uint32_t unicast;
     uint32_t netmask;
     uint32_t broadcast;
-	n3t_device *dev;
+	struct n3t_device *dev;
 };
 
 extern unsigned int sysctl_fib_sync_mem;
