@@ -226,7 +226,7 @@ int __ip_queue_xmit(struct sock *sk, struct sk_buff *skb, struct flowi *fl,
 		    __u8 tos);
 int __init my_ip_init(void); // my func
 int add_n3t_device(struct net_device *dev); // my func
-int n3t_device_add_ip_iface(char dev_name, struct ip_iface *ipif); // my func
+int n3t_device_add_ip_iface(char *dev_name, struct ip_iface *ipif); // my func
 void ip_init(void);
 int ip_append_data(struct sock *sk, struct flowi4 *fl4,
 		   int getfrag(void *from, char *to, int offset, int len,

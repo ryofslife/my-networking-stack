@@ -48,7 +48,7 @@ int add_n3t_device(struct net_device *dev)
 {
 	struct n3t_device *d3v;
 	
-	d3v = kmalloc(sizeof(*dev);
+	d3v = kmalloc(sizeof(*dev));
 	
 	if(!d3v) {
 		printk(KERN_INFO "add_n3t_device(): error allocating memory to n3t_device");
