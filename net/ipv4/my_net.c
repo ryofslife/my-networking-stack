@@ -48,7 +48,7 @@ int add_n3t_device(struct net_device *dev)
 {
 	struct n3t_device *d3v;
 	
-	d3v = kmalloc(sizeof(*dev));
+	d3v = kmalloc(sizeof(*dev), GFP_KERNEL);
 	
 	if(!d3v) {
 		printk(KERN_INFO "add_n3t_device(): error allocating memory to n3t_device");
@@ -56,7 +56,7 @@ int add_n3t_device(struct net_device *dev)
 	}
 	
 	// 仮想デバイスの名前を取得する
-	d3v->name = dev->name;
+	memcpy(d3v->name, dev->name, IFNAMSIZ);
 	
 	// 仮想デバイスのMACアドレスを取得
 	memcpy(d3v->dev_addr, dev->dev_addr, ETH_ALEN);
