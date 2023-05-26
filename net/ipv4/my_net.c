@@ -48,7 +48,7 @@ int add_n3t_device(struct net_device *dev)
 {
 	struct n3t_device *d3v;
 	
-	d3v = memory_alloc(sizeof(*dev));
+	d3v = kmalloc(sizeof(*dev);
 	
 	if(!d3v) {
 		printk(KERN_INFO "add_n3t_device(): error allocating memory to n3t_device");
@@ -59,7 +59,7 @@ int add_n3t_device(struct net_device *dev)
 	d3v->name = dev->name;
 	
 	// 仮想デバイスのMACアドレスを取得
-	d3v->dev_addr = dev->dev_addr;
+	memcpy(d3v->dev_addr, dev->dev_addr, ETH_ALEN);
 	
 	// n3xtのアドレスを更新
 	d3v->next = n3xt;
@@ -69,13 +69,14 @@ int add_n3t_device(struct net_device *dev)
 }
 
 // この関数はとりあえずデバイスドライバ(bcmgenet.c)から呼び出している
-int n3t_device_add_ip_iface(char dev_name, struct ip_iface *ipif)
+int n3t_device_add_ip_iface(char *dev_name, struct ip_iface *ipif)
 {
 	
 	// とりあえずここまででip_iface構造体がデバイスドライバから受け取れているのか、仮想デバイスリストができているのかを確認する
-	printk(KERN_INFO "net_device_add_iface(): ip unicast address of %u\n", n3xt->name);
-	printk(KERN_INFO "net_device_add_iface(): ip netmask of %u\n", n3xt->dev_addr);
-	printk(KERN_INFO "net_device_add_iface(): ip broadcast address of %u\n", n3xt->name);
+	printk(KERN_INFO "net_device_add_iface(): target device name that which searching %s\n", n3xt->name);
+	printk(KERN_INFO "net_device_add_iface(): ip unicast address of %u\n", ipif->unicast);
+	printk(KERN_INFO "net_device_add_iface(): ip netmask of %u\n", ipif->netmask);
+	printk(KERN_INFO "net_device_add_iface(): ip broadcast address of %u\n", ipif->broadcast);
 	printk(KERN_INFO "net_device_add_iface(): resgistering %s\n", n3xt->name);
 	printk(KERN_INFO "net_device_add_iface(): hw address(pM) of %pM\n", n3xt->dev_addr);
 	

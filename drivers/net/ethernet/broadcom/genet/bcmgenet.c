@@ -4015,6 +4015,9 @@ static int bcmgenet_probe(struct platform_device *pdev)
 	struct net_device *dev;
 	unsigned int i;
 	int err = -EIO;
+	
+	//　IPIFの初期化
+	struct ip_iface *ipif;
 
 	/* Up to GENET_MAX_MQ_CNT + 1 TX queues and RX queues */
 	dev = alloc_etherdev_mqs(sizeof(*priv), GENET_MAX_MQ_CNT + 1,
@@ -4198,8 +4201,7 @@ static int bcmgenet_probe(struct platform_device *pdev)
 		
 		// とりあえずここでip_ifaceを初期化してn3t_device_add_ip_iface()に渡す、後でkernel moduleとかで投入できるようにする
 		// struct ip_ifaceについてはnet/ip.hに定義しておく
-		struct ip_iface *ipif;
-		ipif = memory_alloc(sizeof(*ipif));
+		ipif = kmalloc(sizeof(*ipif);
 		ipif->unicast = 3232238083;
 		ipif->netmask = 4294967040;
 		ipif->broadcast = 4294967295;

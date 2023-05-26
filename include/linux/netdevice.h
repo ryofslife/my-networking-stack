@@ -78,7 +78,7 @@ struct xdp_buff;
 // my struct
 struct n3t_device {
     struct n3t_device *next;
-    char dev_name[10];
+    char name[10];
     u_int8_t  dev_addr[ETH_ALEN];
 };
 
