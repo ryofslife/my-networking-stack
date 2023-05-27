@@ -86,7 +86,7 @@ int n3t_device_add_ip_iface(char *dev_name, struct ip_iface *ipif)
 	// dev_nameによるdevリストの探索
 	// https://github.com/ryofslife/sample_network_stack/blob/main/net.c#L148
 	for (entry = next_dev; entry; entry = next_dev->next) {
-		if (strcmp(entry->name, dev_name)) {
+		if (strcmp(entry->name, dev_name) == 0) {
 			// 該当する仮想デバイスを渡されたいぴｆに追加する
 			ipif->dev = entry;
 			// 渡されたいぴｆをいぴｆリストの先頭に追加する
