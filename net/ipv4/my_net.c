@@ -73,6 +73,8 @@ int add_n3t_device(struct net_device *dev)
 // この関数はとりあえずデバイスドライバ(bcmgenet.c)から呼び出している
 int n3t_device_add_ip_iface(char *dev_name, struct ip_iface *ipif)
 {
+	struct n3t_device *entry;
+	
 	// とりあえずここまででip_iface構造体がデバイスドライバから受け取れているのか、仮想デバイスリストができているのかを確認する
 	printk(KERN_INFO "n3t_device_add_iface(): target device name that which searching %s\n", dev_name);
 	printk(KERN_INFO "n3t_device_add_iface(): ip unicast address of %u\n", ipif->unicast);
@@ -100,6 +102,8 @@ int n3t_device_add_ip_iface(char *dev_name, struct ip_iface *ipif)
 // 返り値voidのいぴいｆをダンプする関数、デバイスドライバからn3t_device_add_ip_iface()の後に呼び出す
 void dump_ip_ifaces(void)
 {
+	struct ip_iface *entry;
+	
 	// いｐいｆリストにあるインタフェイスを全てダンプする
 	for (entry = next_ipif; entry; entry = next_ipif->next) {
 		if (entry) {
