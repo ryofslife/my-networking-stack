@@ -36,14 +36,4 @@
 // #include <net/net_debug.h>
 // #include <net/dropreason.h>
 
-// // my func
-// // int net_device_add_iface(struct net_device *dev);
-
-// // struct net_iface {
-	// // // 次のIFへのポインタ
-	// // // 複数のプロトコルが一つの仮想デバイスに登録されている場合
-	// // // 複数の仮想デバイスが存在しておりそれぞれにプロトコルIFが必要な場合
-	// // struct net_iface *next;
-	// // struct net_device *dev;
-	// // int family;
-// // };
+void dump_ip_ifaces(void);

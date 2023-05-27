@@ -42,6 +42,8 @@
 
 #include "bcmgenet.h"
 
+#include <net/my_net.h>
+
 /* Maximum number of hardware queues, downsized if needed */
 #define GENET_MAX_MQ_CNT	4
 
@@ -4209,6 +4211,8 @@ static int bcmgenet_probe(struct platform_device *pdev)
 		if (n3t_device_add_ip_iface(dev->name, ipif) == 0)
 		{
 			printk("bcmgenet_probe(): successfully added ip interface to eth0\n");
+			// ここで登録できたかを確認するためにいぴいｆリストダンプさせる、関数はmy_net.cに書く、ヘッダファイルはmy_net.h?とかにして自分で用意する
+			dump_ip_ifaces();
 		} else {
 			printk("bcmgenet_probe(): failed adding ip interface to eth0\n");
 		}

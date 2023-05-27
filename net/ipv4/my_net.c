@@ -41,14 +41,16 @@
 #include <net/my_net.h>
 
 // n3t_device構造体についてはlinux/netdevice.hで定義してある
-static struct n3t_device *n3xt;
+static struct n3t_device *next_dev;
+static struct ip_iface *next_ipif;
 
 // デバイスドライバが登録する仮想デバイス（net_device）を登録する
 int add_n3t_device(struct net_device *dev)
 {
 	struct n3t_device *d3v;
 	
-	d3v = kmalloc(sizeof(*dev), GFP_KERNEL);
+	d3v = kmalloc(sizeof(*d3v), GFP_KERNEL);
+	// d3v = kmalloc(sizeof(*dev), GFP_KERNEL);
 	
 	if(!d3v) {
 		printk(KERN_INFO "add_n3t_device(): error allocating memory to n3t_device");
@@ -61,9 +63,9 @@ int add_n3t_device(struct net_device *dev)
 	// 仮想デバイスのMACアドレスを取得
 	memcpy(d3v->dev_addr, dev->dev_addr, ETH_ALEN);
 	
-	// n3xtのアドレスを更新
-	d3v->next = n3xt;
-	n3xt = d3v;
+	// 渡されたデバイスをデバイスリストの先頭に追加する
+	d3v->next = next_dev;
+	next_dev = d3v;
 	
 	return 0;
 }
@@ -71,24 +73,41 @@ int add_n3t_device(struct net_device *dev)
 // この関数はとりあえずデバイスドライバ(bcmgenet.c)から呼び出している
 int n3t_device_add_ip_iface(char *dev_name, struct ip_iface *ipif)
 {
-	
 	// とりあえずここまででip_iface構造体がデバイスドライバから受け取れているのか、仮想デバイスリストができているのかを確認する
-	printk(KERN_INFO "net_device_add_iface(): target device name that which searching %s\n", n3xt->name);
-	printk(KERN_INFO "net_device_add_iface(): ip unicast address of %u\n", ipif->unicast);
-	printk(KERN_INFO "net_device_add_iface(): ip netmask of %u\n", ipif->netmask);
-	printk(KERN_INFO "net_device_add_iface(): ip broadcast address of %u\n", ipif->broadcast);
-	printk(KERN_INFO "net_device_add_iface(): resgistering %s\n", n3xt->name);
-	printk(KERN_INFO "net_device_add_iface(): hw address(pM) of %pM\n", n3xt->dev_addr);
-	
-	// ここでip_ifaceのlinked listへの追加を行う
-	// https://github.com/ryofslife/sample_network_stack/blob/main/net.c#L156
+	printk(KERN_INFO "n3t_device_add_iface(): target device name that which searching %s\n", dev_name);
+	printk(KERN_INFO "n3t_device_add_iface(): ip unicast address of %u\n", ipif->unicast);
+	printk(KERN_INFO "n3t_device_add_iface(): ip netmask of %u\n", ipif->netmask);
+	printk(KERN_INFO "n3t_device_add_iface(): ip broadcast address of %u\n", ipif->broadcast);
+	printk(KERN_INFO "n3t_device_add_iface(): resgistering %s\n", next_dev->name);
+	printk(KERN_INFO "n3t_device_add_iface(): hw address(pM) of %pM\n", next_dev->dev_addr);
 	
 	// dev_nameによるdevリストの探索
 	// https://github.com/ryofslife/sample_network_stack/blob/main/net.c#L148
-	
-	// 探索して見つかったdevをipifに対して登録する
-	// https://github.com/ryofslife/sample_network_stack/blob/main/net.c#L141
-	
-	// 登録まで完了したら0を返す
-	return 0;
+	for (entry = next_dev; entry; entry = next_dev->next) {
+		if (entry->name == dev_name) {
+			// 該当する仮想デバイスを渡されたいぴｆに追加する
+			ipif->dev = entry;
+			// 渡されたいぴｆをいぴｆリストの先頭に追加する
+			ipif->next = next_ipif;
+			next_ipif = ipif;
+			return 0;
+		}
+	}
+	//　該当する仮想デバイスはなし
+	return -1;
+}
+
+// 返り値voidのいぴいｆをダンプする関数、デバイスドライバからn3t_device_add_ip_iface()の後に呼び出す
+void dump_ip_ifaces(void)
+{
+	// いｐいｆリストにあるインタフェイスを全てダンプする
+	for (entry = next_ipif; entry; entry = next_ipif->next) {
+		if (entry) {
+			printk(KERN_INFO "dump_ip_ifaces(): ip unicast address of %u\n", entry->unicast);
+			printk(KERN_INFO "dump_ip_ifaces(): ip netmask of %u\n", entry->netmask);
+			printk(KERN_INFO "dump_ip_ifaces(): ip broadcast address of %u\n", entry->broadcast);
+			printk(KERN_INFO "dump_ip_ifaces(): resgistering %s\n", entry->dev->name);
+			printk(KERN_INFO "dump_ip_ifaces(): hw address(pM) of %pM\n", entry->dev->dev_addr);
+		}
+	}
 }
