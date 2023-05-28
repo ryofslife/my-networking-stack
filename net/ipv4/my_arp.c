@@ -83,7 +83,7 @@ static struct packet_type arp_packet_type __read_mostly = {
 // arpスタックの初期化
 int __init my_arp_init(void)
 {
-	dev_add_pack(&arp_packet_type);
+//	dev_add_pack(&arp_packet_type);
 	
 	return 0;
 }
