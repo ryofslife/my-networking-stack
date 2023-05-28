@@ -58,6 +58,7 @@
 
 #include <trace/events/sock.h>
 
+#include <net/my_arp.h>
 
 static struct packet_type ip_packet_type __read_mostly = {
     .type = cpu_to_be16(ETH_P_IP),

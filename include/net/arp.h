@@ -75,5 +75,3 @@ struct sk_buff *arp_create(int type, int ptype, __be32 dest_ip,
 void arp_xmit(struct sk_buff *skb);
 
 #endif	/* _ARP_H */
-
-int __init my_arp_init(void); // my func
