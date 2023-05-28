@@ -68,10 +68,10 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 	/* とりあえずここまでパスした場合はダンプしておく */
 	printk(KERN_INFO "my_arp_rcv(): address of skb%p\n", skb);
 	printk(KERN_INFO "my_arp_rcv(): address of arp header%p\n", arp);
-	printk(KERN_INFO "my_arp_rcv(): sender hardware address of %hhu\n", arp->ar_sha);
-	printk(KERN_INFO "my_arp_rcv(): sender IP address of %hhu\n", arp->ar_sip);
-	printk(KERN_INFO "my_arp_rcv(): target hardware address %hhu\n", arp->ar_tha);
-	printk(KERN_INFO "my_arp_rcv(): target IP address of %hhu\n", arp->ar_tip);	
+	printk(KERN_INFO "my_arp_rcv(): sender hardware address of %s\n", arp->ar_sha);
+	printk(KERN_INFO "my_arp_rcv(): sender IP address of %s\n", arp->ar_sip);
+	printk(KERN_INFO "my_arp_rcv(): target hardware address %s\n", arp->ar_tha);
+	printk(KERN_INFO "my_arp_rcv(): target IP address of %s\n", arp->ar_tip);	
 	
 	// // 届いたarpのsanity check
 	// if (my_arphdr_check(arp) == 0)
