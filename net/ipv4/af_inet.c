@@ -1995,9 +1995,9 @@ static int __init inet_init(void)
 	/*
 	 *	Set the ARP module up
 	 */
-
+#ifdef ENABLE_LINUX_STACK
 	arp_init();
-
+#endif
 	/*
 	 *	Set the IP module up
 	 */

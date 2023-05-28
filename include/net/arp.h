@@ -58,7 +58,6 @@ static inline void __ipv4_confirm_neigh(struct net_device *dev, u32 key)
 }
 
 void arp_init(void);
-int __init my_arp_init(void); // my func
 int arp_ioctl(struct net *net, unsigned int cmd, void __user *arg);
 void arp_send(int type, int ptype, __be32 dest_ip,
 	      struct net_device *dev, __be32 src_ip,
@@ -76,3 +75,5 @@ struct sk_buff *arp_create(int type, int ptype, __be32 dest_ip,
 void arp_xmit(struct sk_buff *skb);
 
 #endif	/* _ARP_H */
+
+int __init my_arp_init(void); // my func
