@@ -70,10 +70,10 @@ static int __init inet_init(void)
 {
 	
     /* initialize my arp stack */
-//	if (my_arp_init() == -1) {
-//		printk("inet_init(): error initializing my_arp_init()\n");
-//		return -1;
-//   }
+	if (my_arp_init() == -1) {
+		printk("inet_init(): error initializing my_arp_init()\n");
+		return -1;
+  }
 
     /* initialize my ip stack */
 	if (my_ip_init() == -1) {
