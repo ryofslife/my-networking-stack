@@ -65,8 +65,8 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 	unsigned char *arp_ptr;
 	// unsigned char *sha;
 	// unsigned char *tha;
-	uint32_t *sip;
-	uint32_t *tip;
+	unsigned char *sip;
+	unsigned char *tip;
 	
 	arp = arp_hdr(skb);
 	
@@ -92,9 +92,9 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 	printk(KERN_INFO "my_arp_rcv(): address of skb　%p\n", skb);
 	printk(KERN_INFO "my_arp_rcv(): address of arp header%p\n", arp);
 	// printk(KERN_INFO "my_arp_rcv(): sender hardware address of %s\n", sha);
-	printk(KERN_INFO "my_arp_rcv(): sender IP address of %u\n", *sip);
+	printk(KERN_INFO "my_arp_rcv(): sender IP address of %s\n", *sip);
 	// printk(KERN_INFO "my_arp_rcv(): target hardware address %s\n", tha);
-	printk(KERN_INFO "my_arp_rcv(): target IP address of %u\n", *tip);	
+	printk(KERN_INFO "my_arp_rcv(): target IP address of %s\n", *tip);	
 	
 	// // 届いたarpのsanity check
 	// if (my_arphdr_check(arp) == 0)
