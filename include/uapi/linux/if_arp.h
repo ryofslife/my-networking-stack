@@ -150,7 +150,7 @@ struct arphdr {
 	__be16		ar_op;		/* ARP opcode (command)		*/
 
 // 参照したいので外してみる
-// #if 0
+#if 0
 	 /*
 	  *	 Ethernet looks like this : This bit is variable sized however...
 	  */
@@ -158,7 +158,7 @@ struct arphdr {
 	unsigned char		ar_sip[4];		/* sender IP address		*/
 	unsigned char		ar_tha[ETH_ALEN];	/* target hardware address	*/
 	unsigned char		ar_tip[4];		/* target IP address		*/
-// #endif
+#endif
 
 };
 
