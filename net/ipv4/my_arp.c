@@ -71,7 +71,7 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 	arp = arp_hdr(skb);
 	
 	// ポインタをshaにずらす
-	arp_ptr = (unsigned char *)(arp + 1);
+	arp_ptr = (unsigned char(*)[4])(arp + 1);
 	// sha	= arp_ptr;
 	
 	//　ポインタをsipにずらす
