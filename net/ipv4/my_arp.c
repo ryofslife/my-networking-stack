@@ -62,7 +62,7 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 	
 	int drop_reason;
 	const struct arphdr *arp;
-	unsigned char *arp_ptr;
+	unsigned char *arp_ptr[4];
 	// unsigned char *sha;
 	// unsigned char *tha;
 	unsigned char *sip[4];
