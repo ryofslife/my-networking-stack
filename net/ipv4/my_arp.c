@@ -65,8 +65,8 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 	unsigned char *arp_ptr;
 	// unsigned char *sha;
 	// unsigned char *tha;
-	unsigned char *sip;
-	unsigned char *tip;
+	unsigned char *sip[4];
+	unsigned char *tip[4];
 	
 	arp = arp_hdr(skb);
 	
