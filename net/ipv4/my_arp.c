@@ -65,19 +65,17 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 	unsigned char *arp_ptr[4];
 	// unsigned char *sha;
 	// unsigned char *tha;
-	unsigned char *sip[4];
-	unsigned char *tip[4];
+	__be32 sip, tip;
 	
 	arp = arp_hdr(skb);
 	
 	// ポインタをshaにずらす
-	arp_ptr = (unsigned char(*)[4])(arp + 1);
+	arp_ptr = (unsigned char *)(arp + 1);
 	// sha	= arp_ptr;
 	
 	//　ポインタをsipにずらす
 	arp_ptr += dev->addr_len;
-	sip	= arp_ptr;
-	memcpy(sip, arp_ptr, 4);
+	memcpy(&sip, arp_ptr, 4);
 
 	// ポインタをthaにずらす
 	arp_ptr += 4;
@@ -85,16 +83,15 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 	
 	// ポインタをtipにずらす
 	arp_ptr += dev->addr_len;
-	tip = arp_ptr;
-	memcpy(tip, arp_ptr, 4);
+	memcpy(&tip, arp_ptr, 4);
 
 	/* とりあえずここまでパスした場合はダンプしておく */
 	printk(KERN_INFO "my_arp_rcv(): address of skb　%p\n", skb);
 	printk(KERN_INFO "my_arp_rcv(): address of arp header%p\n", arp);
 	// printk(KERN_INFO "my_arp_rcv(): sender hardware address of %s\n", sha);
-	printk(KERN_INFO "my_arp_rcv(): sender IP address of %s\n", *sip);
+	printk(KERN_INFO "my_arp_rcv(): sender IP address of %p\n", sip);
 	// printk(KERN_INFO "my_arp_rcv(): target hardware address %s\n", tha);
-	printk(KERN_INFO "my_arp_rcv(): target IP address of %s\n", *tip);	
+	printk(KERN_INFO "my_arp_rcv(): target IP address of %p\n", tip);	
 	
 	// // 届いたarpのsanity check
 	// if (my_arphdr_check(arp) == 0)
