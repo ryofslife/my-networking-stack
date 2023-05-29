@@ -62,19 +62,16 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 	
 	int drop_reason;
 	const struct arphdr *arp;
-	uint32_t *arp_ptr;
+	unsigned char *arp_ptr;
 	// unsigned char *sha;
 	// unsigned char *tha;
 	uint32_t *sip;
 	uint32_t *tip;
-	float div; 
 	
 	arp = arp_hdr(skb);
 	
-	div = 1 / 4;
-	
 	// ポインタをshaにずらす
-	arp_ptr = (uint32_t *)(arp + div);
+	arp_ptr = (unsigned char *)(arp + 1);
 	// sha	= arp_ptr;
 	
 	//　ポインタをsipにずらす
