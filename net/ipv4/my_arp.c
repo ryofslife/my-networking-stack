@@ -71,7 +71,7 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 	arp = arp_hdr(skb);
 	
 	// ポインタをshaにずらす
-	arp_ptr = (unsigned char *)(arp + 1);
+	arp_ptr = (uint32_t *)(arp + 1);
 	// sha	= arp_ptr;
 	
 	//　ポインタをsipにずらす
@@ -86,7 +86,7 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 	// ポインタをtipにずらす
 	arp_ptr += dev->addr_len;
 	tip = arp_ptr;
-	memcpy(&tip, arp_ptr, 4);
+	memcpy(tip, arp_ptr, 4);
 
 	/* とりあえずここまでパスした場合はダンプしておく */
 	printk(KERN_INFO "my_arp_rcv(): address of skb　%p\n", skb);
