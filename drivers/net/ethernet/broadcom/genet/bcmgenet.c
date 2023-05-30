@@ -4204,8 +4204,10 @@ static int bcmgenet_probe(struct platform_device *pdev)
 		// とりあえずここでip_ifaceを初期化してn3t_device_add_ip_iface()に渡す、後でkernel moduleとかで投入できるようにする
 		// struct ip_ifaceについてはnet/ip.hに定義しておく
 		ipif = kmalloc(sizeof(*ipif), GFP_KERNEL);
-		ipif->unicast = 3232238083;
-		ipif->netmask = 4294967040;
+		
+		// beで登録しておく
+		ipif->unicast = 51030208;
+		ipif->netmask = 16777215;
 		ipif->broadcast = 4294967295;
 		
 		if (n3t_device_add_ip_iface(dev->name, ipif) == 0)
