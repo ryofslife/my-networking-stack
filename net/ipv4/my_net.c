@@ -107,12 +107,12 @@ int find_ip_iface(unsigned int tip)
 	// IPインタフェイスリストにあるインタフェイスをtipに対して探索する
 	for (entry = next_ipif; entry; entry = next_ipif->next) {
 		if (entry->unicast == tip) {
-			printk(KERN_INFO "find_ip_iface(): find an ip interface with tip\n", entry->unicast);
+			printk(KERN_INFO "find_ip_iface(): found an ip interface with tip\n");
 			return 1;
 		}
 	}
 	
-	printk(KERN_INFO "find_ip_iface(): no matching ip interface for tip\n", entry->unicast);
+	printk(KERN_INFO "find_ip_iface(): no matching ip interface for tip\n");
 	return 0;
 }
 

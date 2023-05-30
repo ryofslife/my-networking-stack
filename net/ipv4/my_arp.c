@@ -49,21 +49,12 @@
 
 
 // arpリクエストに対するsanity check
-static int my_arphdr_check(struct arphdr *arp)
+static int my_arphdr_check(const struct arphdr *arp)
 {
 	// とりあえず全てパスしたことにしておく
 	// 後で戻ってくる
 	return 0;
 }
-
-// arpリクエストが自分宛か登録してあるIPIFに対して探索を行う
-static int my_arp_ipif_lookup(struct arphdr *arp)
-{
-	// とりあえず全てパスしたことにしておく
-	// 後で戻ってくる
-	return 0;
-}
-
 
 // arpの受信ハンドラ
 // このハンドラはヘッダファイルに含めなくて良い？、ソースコードを読む限りpacket_type.funcに渡すだけ
