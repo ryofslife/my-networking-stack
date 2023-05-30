@@ -99,6 +99,23 @@ int n3t_device_add_ip_iface(char *dev_name, struct ip_iface *ipif)
 	return -1;
 }
 
+// 引数として渡されたIPを基に登録してあるIPインタフェイスを探索する
+int find_ip_iface(unsigned int tip)
+{
+	struct ip_iface *entry;
+	
+	// IPインタフェイスリストにあるインタフェイスをtipに対して探索する
+	for (entry = next_ipif; entry; entry = next_ipif->next) {
+		if (entry->unicast == tip) {
+			printk(KERN_INFO "find_ip_iface(): find an ip interface with tip\n", entry->unicast);
+			return 1;
+		}
+	}
+	
+	printk(KERN_INFO "find_ip_iface(): no matching ip interface for tip\n", entry->unicast);
+	return 0;
+}
+
 // 返り値voidのいぴいｆをダンプする関数、デバイスドライバからn3t_device_add_ip_iface()の後に呼び出す
 void dump_ip_ifaces(void)
 {

@@ -44,18 +44,29 @@
 #include <linux/netfilter_arp.h>
 
 #include <net/my_arp.h>
+#include <net/my_net.h>
 
 
 
 // arpリクエストに対するsanity check
-// static int my_arphdr_check(struct arphdr *arp)
-// {
-	
-// }
+static int my_arphdr_check(struct arphdr *arp)
+{
+	// とりあえず全てパスしたことにしておく
+	// 後で戻ってくる
+	return 0;
+}
+
+// arpリクエストが自分宛か登録してあるIPIFに対して探索を行う
+static int my_arp_ipif_lookup(struct arphdr *arp)
+{
+	// とりあえず全てパスしたことにしておく
+	// 後で戻ってくる
+	return 0;
+}
 
 
 // arpの受信ハンドラ
-// このハンドラはヘッダファイルに含めなくて良い？、ソースコードえお読む限りpacket_type.funcに渡すだけ
+// このハンドラはヘッダファイルに含めなくて良い？、ソースコードを読む限りpacket_type.funcに渡すだけ
 static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 		   struct packet_type *pt, struct net_device *orig_dev)
 {
@@ -93,20 +104,20 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 	// printk(KERN_INFO "my_arp_rcv(): target hardware address %s\n", tha);
 	printk(KERN_INFO "my_arp_rcv(): target IP address of %u\n", tip);	
 	
-	// // 届いたarpのsanity check
-	// if (my_arphdr_check(arp) == 0)
-	// {
-		// printk("my_arp_rcv(): the arp requsest is for IP protocol\n");
-		// // IPインタフェイスを探索、該当するIPアドレスがあるかどうか確認
-		// dump_ip_ifaces();
-		// drop_reason = SKB_DROP_REASON_NOT_SPECIFIED;
-		// kfree_skb_reason(skb, drop_reason);
-	// } else {
-		// printk("my_arp_rcv(): the arp requsest was for a protocol other than IP\n");
-		// // IPプロトコルではないためskbを破棄
-		// // drop_reason = SKB_DROP_REASON_NOT_SPECIFIED;
-		// // kfree_skb_reason(skb, drop_reason);
-	// }
+	// 届いたarpのsanity check
+	if (my_arphdr_check(arp) == 0)
+	{
+		printk("my_arp_rcv(): the arp requsest is for IP protocol\n");
+		// IPインタフェイスを探索、該当するIPアドレスがあるかどうか確認
+		if (find_ip_iface(tip) == 1)
+		{
+			printk("my_arp_rcv(): found matching ip interface\n");
+		} else {
+			printk("my_arp_rcv(): no matching ip interface found\n");
+		}
+	} else {
+		printk("my_arp_rcv(): the arp requsest was for a protocol other than IP\n");
+	}
 	
 	drop_reason = SKB_DROP_REASON_NOT_SPECIFIED;
 	kfree_skb_reason(skb, drop_reason);

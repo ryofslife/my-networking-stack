@@ -37,3 +37,4 @@
 // #include <net/dropreason.h>
 
 void dump_ip_ifaces(void);
+int find_ip_iface(unsigned int tip);
