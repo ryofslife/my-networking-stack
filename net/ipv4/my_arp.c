@@ -56,6 +56,128 @@ static int my_arphdr_check(const struct arphdr *arp)
 	return 0;
 }
 
+static int arp_reply(int type, int ptype, struct net_device *dev, __be32 src_ip, __be32 dest_ip,
+							const unsigned char *src_hw,
+							const unsigned char *dest_hw, 
+							const unsigned char *target_hw)
+{
+	struct sk_buff *skb;
+	
+	// 自分宛のためarp応答をする、まずはskbを用意する
+	skb = arp_create(ARPOP_REPLY, ETH_P_ARP, dev, sip, tip, dev->dev_addr,　sha, sha);
+	
+	// 用意したskbを送り出す
+	return arp_send(skb);
+			
+}
+
+struct sk_buff *arp_create(int type, int ptype, struct net_device *dev, __be32 src_ip, __be32 dest_ip,
+							const unsigned char *src_hw,
+							const unsigned char *dest_hw, 
+							const unsigned char *target_hw)
+{
+	// skbを用意する
+	struct sk_buff *skb;
+	// arpのデータ部へのポインタ、sip/tipなんかを投入する
+	struct arphdr *arp;
+	// *arp内でずらしながらsip/tipを投入していくためのポインタ
+	unsigned char *arp_ptr;
+	int hlen = LL_RESERVED_SPACE(dev);
+	int tlen = dev->needed_tailroom;
+	
+	// skbを確保する
+	skb = alloc_skb(arp_hdr_len(dev) + hlen + tlen, GFP_ATOMIC);
+	
+	// skbの確保に失敗
+	if (!skb)
+	{
+		return NULL;
+	}
+	
+	// skbのヘッダ分を確保する
+	skb_reserve(skb, hlen);
+	
+	// これが何をしているのかわからない
+	skb_reset_network_header(skb);
+	
+	// arpのデータ部を確保する、確保した*arpに対して色々投入していく
+	arp = skb_put(skb, arp_hdr_len(dev));
+	
+	// デバイス情報を投入する、これに関しては要求で上がってきたskbからdevを抽出したので良いはず？
+	skb->dev = dev;
+	
+	// プロトコルを指定する、ここで指定したプロトコルはどのタイミングで参照されるのか？
+	skb->protocol = htons(ETH_P_ARP);
+	
+	// source hwアドレスが空の際に埋めとく、本来は埋めてからこの関数に渡す
+	if (!src_hw)
+	{
+		src_hw = dev->dev_addr;
+	}
+	
+	// dest hwアドレスが空の際に埋めとく、本来は埋めてからこの関数に渡す
+	// 埋めようにも埋められないので、とりあえずbroadcastを投入しておく
+	if (!dest_hw)
+	{
+		dest_hw = dev->broadcast;
+	}
+	
+	// ethernet headerを埋める、丁寧に関数が用意されている、助かる
+	if (dev_hard_header(skb, dev, ptype, dest_hw, src_hw, skb->len) < 0);
+	{ 
+		goto exit; 
+	}
+	
+	
+	// ここからarpのデータ部を投入してく
+	// hwタイプを投入する、ehter？
+	arp->ar_hrd = htons(dev->type);
+	// プロトコルタイプを投入する、IPとなる
+	arp->ar_pro = htons(ETH_P_IP);
+	// ハードウェアアドレス長を投入する
+	arp->ar_hln = dev->addr_len;
+	// プロトコルアドレス長を投入する、IPなので32bits(４バイト)
+	arp->ar_pln = 4;
+	// オペコードを投入する、リプライなので２、リクエストの場合は１
+	arp->ar_op = htons(type);
+	
+	// メインディッシュを投入してく
+	// 前菜が全部で1バイトなので*arpを１バイト分ずらす
+	arp_ptr = (unsigned char *)(arp + 1);
+	// いきなり自分のMACを投入！
+	memcpy(arp_ptr, src_hw, dev->addr_len);
+	// *arpをetherアドレス分だけずらす
+	arp_ptr += dev->addr_len;
+	//　自分のIPを投入する
+	memcpy(arp_ptr, &src_ip, 4);
+	// IPは４バイト、投入した分だけずらす
+	arp_ptr += 4;
+	// リクエスト元のetherアドレスを投入する、linuxでは異常系の処理を行っているがここではしない
+	memcpy(arp_ptr, target_hw, dev->addr_len);
+	//　etherアドレス分だけずらす
+	arp_ptr += dev->addr_len;
+	// リクエスト元のIPを投入する
+	memcpy(arp_ptr, &dest_ip, 4);
+	
+	return skb;
+	
+exit:
+	// ちゃんとskbは解放してあげる
+	kfree_skb(skb);
+	// とりあえずNULLを返して置けば良い？
+	return NULL;
+	
+}
+
+int arp_send(struct sk_buff *skb)
+{
+	// これが何をしているのかいまいち把握できていない、とりあえずコメントアウトする
+	// skb_dst_set(skb, dst_clone(dst));
+	// skbを送信する
+	return dev_queue_xmit(skb);
+	
+}
+
 // arpの受信ハンドラ
 // このハンドラはヘッダファイルに含めなくて良い？、ソースコードを読む限りpacket_type.funcに渡すだけ
 static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
@@ -65,15 +187,18 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 	int drop_reason;
 	const struct arphdr *arp;
 	unsigned char *arp_ptr;
-	// unsigned char *sha;
-	// unsigned char *tha;
+	unsigned char *sha;
+	unsigned char *tha;
 	__be32 sip, tip;
+	
+	// arp応答に構築に必要な材料を定義する
+	struct net_device *dev = skb->dev;
 	
 	arp = arp_hdr(skb);
 	
 	// ポインタをshaにずらす
 	arp_ptr = (unsigned char *)(arp + 1);
-	// sha	= arp_ptr;
+	sha	= arp_ptr;
 	
 	//　ポインタをsipにずらす
 	arp_ptr += dev->addr_len;
@@ -81,7 +206,7 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 
 	// ポインタをthaにずらす
 	arp_ptr += 4;
-	// tha = arp_ptr;
+	tha = arp_ptr;
 	
 	// ポインタをtipにずらす
 	arp_ptr += dev->addr_len;
@@ -103,6 +228,10 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 		if (find_ip_iface(tip) == 1)
 		{
 			printk("my_arp_rcv(): found matching ip interface\n");
+			
+			// arp応答する
+			arp_reply(ARPOP_REPLY, ETH_P_ARP, dev, sip, tip, dev->dev_addr,　sha, sha);
+			
 		} else {
 			printk("my_arp_rcv(): no matching ip interface found\n");
 		}
