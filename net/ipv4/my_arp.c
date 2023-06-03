@@ -56,21 +56,6 @@ static int my_arphdr_check(const struct arphdr *arp)
 	return 0;
 }
 
-static int my_arp_reply(int type, int ptype, struct net_device *dev, __be32 src_ip, __be32 dest_ip,
-							const unsigned char *src_hw,
-							const unsigned char *dest_hw, 
-							const unsigned char *target_hw)
-{
-	struct sk_buff *skb;
-	
-	// 自分宛のためarp応答をする、まずはskbを用意する
-	skb = my_arp_create(ARPOP_REPLY, ETH_P_ARP, dev, src_ip, dest_ip, src_hw, dest_hw, target_hw);
-	
-	// 用意したskbを送り出す
-	return my_arp_send(skb);
-			
-}
-
 static struct sk_buff *my_arp_create(int type, int ptype, struct net_device *dev, __be32 src_ip, __be32 dest_ip,
 							const unsigned char *src_hw,
 							const unsigned char *dest_hw, 
@@ -123,7 +108,7 @@ static struct sk_buff *my_arp_create(int type, int ptype, struct net_device *dev
 	}
 	
 	// ethernet headerを埋める、丁寧に関数が用意されている、助かる
-	if (dev_hard_header(skb, dev, ptype, dest_hw, src_hw, skb->len) < 0);
+	if (dev_hard_header(skb, dev, ptype, dest_hw, src_hw, skb->len) < 0)
 	{ 
 		goto exit; 
 	}
@@ -178,6 +163,21 @@ static int my_arp_send(struct sk_buff *skb)
 	
 }
 
+static int my_arp_reply(int type, int ptype, struct net_device *dev, __be32 src_ip, __be32 dest_ip,
+							const unsigned char *src_hw,
+							const unsigned char *dest_hw, 
+							const unsigned char *target_hw)
+{
+	struct sk_buff *skb;
+	
+	// 自分宛のためarp応答をする、まずはskbを用意する
+	skb = my_arp_create(ARPOP_REPLY, ETH_P_ARP, dev, src_ip, dest_ip, src_hw, dest_hw, target_hw);
+	
+	// 用意したskbを送り出す
+	return my_arp_send(skb);
+			
+}
+
 // arpの受信ハンドラ
 // このハンドラはヘッダファイルに含めなくて良い？、ソースコードを読む限りpacket_type.funcに渡すだけ
 static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
@@ -192,7 +192,7 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 	__be32 sip, tip;
 	
 	// arp応答に構築に必要な材料を定義する
-	struct net_device *dev = skb->dev;
+	// struct net_device *dev = skb->dev;
 	
 	arp = arp_hdr(skb);
 	
