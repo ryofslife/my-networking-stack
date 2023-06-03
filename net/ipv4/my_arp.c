@@ -64,7 +64,7 @@ static int arp_reply(int type, int ptype, struct net_device *dev, __be32 src_ip,
 	struct sk_buff *skb;
 	
 	// 自分宛のためarp応答をする、まずはskbを用意する
-	skb = arp_create(ARPOP_REPLY, ETH_P_ARP, dev, sip, tip, dev->dev_addr,　sha, sha);
+	skb = arp_create(ARPOP_REPLY, ETH_P_ARP, dev, src_ip, destip, dev->dev_addr,　sha, sha);
 	
 	// 用意したskbを送り出す
 	return arp_send(skb);
@@ -224,24 +224,36 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 	if (my_arphdr_check(arp) == 0)
 	{
 		printk("my_arp_rcv(): the arp requsest is for IP protocol\n");
-		// IPインタフェイスを探索、該当するIPアドレスがあるかどうか確認
-		if (find_ip_iface(tip) == 1)
-		{
-			printk("my_arp_rcv(): found matching ip interface\n");
-			
-			// arp応答する
-			arp_reply(ARPOP_REPLY, ETH_P_ARP, dev, sip, tip, dev->dev_addr,　sha, sha);
-			
-		} else {
-			printk("my_arp_rcv(): no matching ip interface found\n");
-		}
 	} else {
 		printk("my_arp_rcv(): the arp requsest was for a protocol other than IP\n");
+		goto exit;
+	}
+	
+	// IPインタフェイスを探索、該当するIPアドレスがあるかどうか確認
+	if (find_ip_iface(tip) == 1)
+	{
+		printk("my_arp_rcv(): found matching ip interface\n");
+		
+		// arp応答する
+		if (arp_reply(ARPOP_REPLY, ETH_P_ARP, dev, sip, tip, dev->dev_addr,　sha, sha) == 0)
+		{
+			printk("my_arp_rcv(): successfully sent an arp response\n");
+		} else {
+			printk("my_arp_rcv(): failed sending an arp response\n");
+		}
+		
+	} else {
+		printk("my_arp_rcv(): no matching ip interface found\n");
 	}
 	
 	drop_reason = SKB_DROP_REASON_NOT_SPECIFIED;
 	kfree_skb_reason(skb, drop_reason);
 
+	return 0;
+	
+exit:
+	// ちゃんとskbは解放してあげる
+	kfree_skb(skb);
 	return 0;
 	
 }
