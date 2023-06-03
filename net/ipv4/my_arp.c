@@ -163,7 +163,7 @@ static int my_arp_send(struct sk_buff *skb)
 	
 }
 
-static int my_arp_reply(int type, int ptype, struct net_device *dev, __be32 src_ip, __be32 dest_ip,
+static int my_arp_reply(int type, int ptype, struct net_device *dev, __be32 dest_ip, __be32 src_ip,
 							const unsigned char *src_hw,
 							const unsigned char *dest_hw, 
 							const unsigned char *target_hw)
