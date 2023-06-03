@@ -235,7 +235,7 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 		printk("my_arp_rcv(): found matching ip interface\n");
 		
 		// arp応答する
-		if (my_arp_reply(ARPOP_REPLY, ETH_P_ARP, dev, sip, tip, dev->dev_addr,　sha, sha) == 0)
+		if (my_arp_reply(ARPOP_REPLY, ETH_P_ARP, dev, sip, tip, dev->dev_addr, sha, sha) == 0)
 		{
 			printk("my_arp_rcv(): successfully sent an arp response\n");
 		} else {
