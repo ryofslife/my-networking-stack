@@ -64,14 +64,14 @@ static int arp_reply(int type, int ptype, struct net_device *dev, __be32 src_ip,
 	struct sk_buff *skb;
 	
 	// 自分宛のためarp応答をする、まずはskbを用意する
-	skb = arp_create(ARPOP_REPLY, ETH_P_ARP, dev, src_ip, destip, dev->dev_addr,　sha, sha);
+	skb = arp_create(ARPOP_REPLY, ETH_P_ARP, dev, src_ip, dest_ip, src_hw, dest_hw, target_hw);
 	
 	// 用意したskbを送り出す
 	return arp_send(skb);
 			
 }
 
-struct sk_buff *arp_create(int type, int ptype, struct net_device *dev, __be32 src_ip, __be32 dest_ip,
+static struct sk_buff *arp_create(int type, int ptype, struct net_device *dev, __be32 src_ip, __be32 dest_ip,
 							const unsigned char *src_hw,
 							const unsigned char *dest_hw, 
 							const unsigned char *target_hw)
@@ -169,7 +169,7 @@ exit:
 	
 }
 
-int arp_send(struct sk_buff *skb)
+static int arp_send(struct sk_buff *skb)
 {
 	// これが何をしているのかいまいち把握できていない、とりあえずコメントアウトする
 	// skb_dst_set(skb, dst_clone(dst));
