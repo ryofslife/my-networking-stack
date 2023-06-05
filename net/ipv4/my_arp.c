@@ -146,10 +146,10 @@ static struct sk_buff *my_arp_create(int type, int ptype, struct net_device *dev
 	memcpy(arp_ptr, &dest_ip, 4);
 	
 	// 出来上がったarp応答をダンプする
-	printk(KERN_INFO "my_arp_create(): logical address of the stuffed skb %p\n", skb);
+	printk(KERN_INFO "my_arp_create(): logical address of the stuffed skb: %p\n", skb);
 	// skbの論理アドレスを物理アドレスに変換、ダンプする
 	pa = virt_to_phys(skb);
-	printk(KERN_INFO "my_arp_create(): physical address of the stuffed skb %llu\n", pa);
+	printk(KERN_INFO "my_arp_create(): physical address of the stuffed skb: %llu\n", pa);
 	
 	return skb;
 	
