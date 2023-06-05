@@ -46,8 +46,6 @@
 #include <net/my_arp.h>
 #include <net/my_net.h>
 
-
-
 // arpリクエストに対するsanity check
 static int my_arphdr_check(const struct arphdr *arp)
 {
@@ -69,6 +67,9 @@ static struct sk_buff *my_arp_create(int type, int ptype, struct net_device *dev
 	unsigned char *arp_ptr;
 	int hlen = LL_RESERVED_SPACE(dev);
 	int tlen = dev->needed_tailroom;
+	
+	// 物理アドレス取得のための変数
+	static phys_addr_t pa;
 	
 	// skbを確保する
 	skb = alloc_skb(arp_hdr_len(dev) + hlen + tlen, GFP_ATOMIC);
@@ -144,6 +145,12 @@ static struct sk_buff *my_arp_create(int type, int ptype, struct net_device *dev
 	// リクエスト元のIPを投入する
 	memcpy(arp_ptr, &dest_ip, 4);
 	
+	// 出来上がったarp応答をダンプする
+	printk(KERN_INFO "my_arp_create(): logical address of the stuffed skb %p\n", skb);
+	// skbの論理アドレスを物理アドレスに変換、ダンプする
+	pa = virt_to_phys(skb);
+	printk(KERN_INFO "my_arp_create(): physical address of the stuffed skb %lu\n", pa);
+	
 	return skb;
 	
 exit:
@@ -214,7 +221,7 @@ static int my_arp_rcv(struct sk_buff *skb, struct net_device *dev,
 
 	/* とりあえずここまでパスした場合はダンプしておく */
 	printk(KERN_INFO "my_arp_rcv(): address of skb　%p\n", skb);
-	printk(KERN_INFO "my_arp_rcv(): address of arp header%p\n", arp);
+	printk(KERN_INFO "my_arp_rcv(): address of arp header %p\n", arp);
 	// printk(KERN_INFO "my_arp_rcv(): sender hardware address of %s\n", sha);
 	printk(KERN_INFO "my_arp_rcv(): sender IP address of %u\n", sip);
 	// printk(KERN_INFO "my_arp_rcv(): target hardware address %s\n", tha);
