@@ -3998,13 +3998,24 @@ static const struct bcmgenet_plat_data bcm7712_plat_data = {
 };
 
 static const struct of_device_id bcmgenet_match[] = {
-	{ .compatible = "brcm,genet-v1", .data = &v1_plat_data },
-	{ .compatible = "brcm,genet-v2", .data = &v2_plat_data },
-	{ .compatible = "brcm,genet-v3", .data = &v3_plat_data },
-	{ .compatible = "brcm,genet-v4", .data = &v4_plat_data },
-	{ .compatible = "brcm,genet-v5", .data = &v5_plat_data },
-	{ .compatible = "brcm,bcm2711-genet-v5", .data = &bcm2711_plat_data },
-	{ .compatible = "brcm,bcm7712-genet-v5", .data = &bcm7712_plat_data },
+	// 既存
+	// { .compatible = "brcm,genet-v1", .data = &v1_plat_data },
+	// { .compatible = "brcm,genet-v2", .data = &v2_plat_data },
+	// { .compatible = "brcm,genet-v3", .data = &v3_plat_data },
+	// { .compatible = "brcm,genet-v4", .data = &v4_plat_data },
+	// { .compatible = "brcm,genet-v5", .data = &v5_plat_data },
+	// { .compatible = "brcm,bcm2711-genet-v5", .data = &bcm2711_plat_data },
+	// { .compatible = "brcm,bcm7712-genet-v5", .data = &bcm7712_plat_data },
+	// { },
+	
+	// disableする
+	{ .compatible = "brcm,genet-v1-d", .data = &v1_plat_data },
+	{ .compatible = "brcm,genet-v2-d", .data = &v2_plat_data },
+	{ .compatible = "brcm,genet-v3-d", .data = &v3_plat_data },
+	{ .compatible = "brcm,genet-v4-d", .data = &v4_plat_data },
+	{ .compatible = "brcm,genet-v5-d", .data = &v5_plat_data },
+	{ .compatible = "brcm,bcm2711-genet-v5-d", .data = &bcm2711_plat_data },
+	{ .compatible = "brcm,bcm7712-genet-v5-d", .data = &bcm7712_plat_data },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, bcmgenet_match);
