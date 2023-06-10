@@ -96,6 +96,7 @@ static struct platform_driver my_platform_driver = {
 	.remove = my_platform_device_remove,
 	.driver = {
 		.name = DRIVER_NAME,
+		.of_match_table = nic_match,
 	},
 };
 
