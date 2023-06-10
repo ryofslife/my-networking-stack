@@ -76,8 +76,16 @@ static int my_platform_device_remove(struct platform_device *pdev)
 
 // デバイスツリーにあるNICに対応するドライバであることを書く
 static const struct of_device_id nic_match[] = {
+	// { .compatible = "brcm,bcm2711-genet-v5" },
+	// {},
+	
+	{ .compatible = "brcm,genet-v1" },
+	{ .compatible = "brcm,genet-v2" },
+	{ .compatible = "brcm,genet-v3" },
+	{ .compatible = "brcm,genet-v4" },
+	{ .compatible = "brcm,genet-v5" },
 	{ .compatible = "brcm,bcm2711-genet-v5" },
-	{},
+	{ },
 };
 MODULE_DEVICE_TABLE(of, nic_match);
 
