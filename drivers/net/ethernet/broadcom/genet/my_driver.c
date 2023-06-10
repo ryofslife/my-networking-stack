@@ -32,6 +32,9 @@
 
 #include "bcmgenet.h"
 
+
+#define DRIVER_NAME "RYOZ_DRIVER"
+
 // probe関数を用意する
 static int my_platform_device_probe(struct platform_device *pdev)
 {
@@ -59,7 +62,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 static int my_platform_device_remove(struct platform_device *pdev)
 {
 	// 仮想デバイス分のメモリを解放する
-	struct net_device *ndev = dev_get_drvdata(pdev);
+	struct net_device *ndev = dev_get_drvdata(&pdev->dev);
 	free_netdev(ndev);
 	
     // 完了
@@ -69,21 +72,21 @@ static int my_platform_device_remove(struct platform_device *pdev)
 }
 
 // デバイスツリーにあるNICに対応するドライバであることを書く
-static const struct of_device_id nic_match[] {
+static const struct of_device_id nic_match[] = {
 	{ .compatible = "brcm,bcm2711-genet-v5" },
 	{},
-}
+};
 MODULE_DEVICE_TABLE(i2c, nic_match);
 
 // kernelに渡すためのハンドラ関数を用意する
 static struct platform_driver my_platform_driver = {
-	.probe = my_platform_device_prove,
+	.probe = my_platform_device_probe,
 	.remove = my_platform_device_remove,
 	.driver = {
 		.name = RYOZ_DRIVER,
-		.owner = RYO,
 	},
-}
+};
+
 module_platform_driver(my_platform_driver);
 
 MODULE_AUTHOR("RYO");
