@@ -83,7 +83,7 @@ static struct platform_driver my_platform_driver = {
 	.probe = my_platform_device_probe,
 	.remove = my_platform_device_remove,
 	.driver = {
-		.name = RYOZ_DRIVER,
+		.name = DRIVER_NAME,
 	},
 };
 
