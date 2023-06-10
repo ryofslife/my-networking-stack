@@ -51,6 +51,9 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	// 物理デバイスに対して仮想デバイスを紐づける
 	dev_set_drvdata(&pdev->dev, ndev);
 	
+	// 一通りできたら以下を呼ぶ
+	// register_netdev()
+	
 	// 一連のprobeを完了
 	printk(KERN_INFO "my_platform_device_probe(): probing completed\n");
 	
@@ -76,7 +79,7 @@ static const struct of_device_id nic_match[] = {
 	{ .compatible = "brcm,bcm2711-genet-v5" },
 	{},
 };
-MODULE_DEVICE_TABLE(i2c, nic_match);
+MODULE_DEVICE_TABLE(of, nic_match);
 
 // kernelに渡すためのハンドラ関数を用意する
 static struct platform_driver my_platform_driver = {
