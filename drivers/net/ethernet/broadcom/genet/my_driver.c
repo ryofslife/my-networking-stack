@@ -85,6 +85,7 @@ static const struct of_device_id nic_match[] = {
 	{ .compatible = "brcm,genet-v4" },
 	{ .compatible = "brcm,genet-v5" },
 	{ .compatible = "brcm,bcm2711-genet-v5" },
+	{ .compatible = "brcm,bcm7712-genet-v5" },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, nic_match);
