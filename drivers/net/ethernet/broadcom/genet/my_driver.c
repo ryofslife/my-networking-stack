@@ -67,7 +67,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 		printk("my_platform_device_probe(): failed to get irq from the device tree\n");
 		goto err;
 	} else {
-		printk("my_platform_device_probe(): successfully got the irq of %d\n", *priv->irq);
+		printk("my_platform_device_probe(): successfully got the irq of %d\n", priv->irq);
 	}
 	
 	// mmioのベースアドレスを取得、このタイミングではまだ物理アドレスなので仮想アドレスに変換する必要がある
