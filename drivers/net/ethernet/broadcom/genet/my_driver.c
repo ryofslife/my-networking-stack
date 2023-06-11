@@ -80,7 +80,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	}
 	
 	// mmioの物理アドレスを仮想アドレスに変換する
-	priv->base = ioremap_nocache(rsc->start, rsc->end - rsc->start + 1);
+	priv->base = ioremap(rsc->start, rsc->end - rsc->start + 1);
 	if (!priv->base) {
 		printk("my_platform_device_probe(): failed to get the mmio physical address\n");
 		goto err;
