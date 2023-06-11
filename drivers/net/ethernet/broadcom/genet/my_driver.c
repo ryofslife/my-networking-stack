@@ -32,6 +32,8 @@
 
 #include "bcmgenet.h"
 
+#include "my_driver.h"
+
 
 #define DRIVER_NAME "RYOZ_DRIVER"
 
@@ -39,12 +41,52 @@
 static int my_platform_device_probe(struct platform_device *pdev)
 {
 	// 物理デバイス用
-	struct bcmgenet_priv *priv;
+	struct my_priv *priv;
 	// 仮想デバイス用
 	struct net_device *ndev;
+	// platform_get_resource()用
+	struct resource *rsc;
 	
 	// single queueで仮想デバイスをprovisionする
 	ndev = alloc_etherdev(sizeof(priv));
+	if (ndev)
+	{	
+		printk("my_platform_device_probe(): successfully allocated net_device\n");
+	} else {
+		printk("my_platform_device_probe(): failed to allocate net_device\n");
+		goto err;
+	}
+	
+	// 返されたndevからprivを取得する、mmioやirqを投入してくため
+	priv = netdev_priv(ndev);
+	
+	// 優先キューに紐づくirqをprivに投入する
+	priv->irq = platform_get_irq(pdev, 1);
+	if (priv->irq < 0)
+	{
+		printk("my_platform_device_probe(): failed to get irq from the device tree\n");
+		goto err;
+	} else {
+		printk("my_platform_device_probe(): successfully got the irq of %d\n", *priv->irq);
+	}
+	
+	// mmioのベースアドレスを取得、このタイミングではまだ物理アドレスなので仮想アドレスに変換する必要がある
+	rsc = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!rsc) {
+		printk("my_platform_device_probe(): failed to get the list of resources\n");
+		goto err;
+	} else {
+		printk("my_platform_device_probe(): successfully got the list of resources\n");
+	}
+	
+	// mmioの物理アドレスを仮想アドレスに変換する
+	priv->base = ioremap_nocache(rsc->start, rsc->end - rsc->start + 1);
+	if (!priv->base) {
+		printk("my_platform_device_probe(): failed to get the mmio physical address\n");
+		goto err;
+	} else {
+		printk("my_platform_device_probe(): successfully mapped the mmio virtual address of %p\n", priv->base);
+	}
 	
 	// 仮想デバイスに対して物理デバイスを紐づける
 	SET_NETDEV_DEV(ndev, &pdev->dev);
@@ -58,6 +100,10 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	printk(KERN_INFO "my_platform_device_probe(): probing completed\n");
 	
 	return 0;
+	
+err:
+	free_netdev(ndev);
+	return -1;
 	
 }
 
