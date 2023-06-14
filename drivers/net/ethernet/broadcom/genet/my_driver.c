@@ -99,12 +99,12 @@ static int my_xmit(struct sk_buff *skb, struct net_device *dev)
 }
 
 // .ndo_gハンドラを用意する
-static int my_get_stats(struct net_device *dev)
+static struct net_device_stats *my_get_stats(struct net_device *dev)
 {
 	// 特にまだ何もしない
 	printk("my_get_stats(): Hi there, I'm the bookkeeper!\n");
 	
-	return 0;
+	return &dev->stats;
 
 }
 
