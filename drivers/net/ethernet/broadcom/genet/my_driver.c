@@ -37,6 +37,20 @@
 
 #define DRIVER_NAME "RYOZ_DRIVER"
 
+// 受信ハンドラを用意する
+static irqreturn_t my_isr(int irq, void *dev_id)
+{
+	// my_privへの型変換
+	struct my_priv *priv = (struct my_priv *)dev_id;
+	
+	// 割り込みがあった
+	printk("my_isr(): Hi there, there was an interrupt\n");
+	printk("my_isr(): interrupt with an irq of %d\n", irq);
+	printk("my_isr(): device with an irq of %d\n", priv->irq);
+	
+	return IRQ_HANDLED;
+}
+
 // .openハンドラを用意する
 static int my_open(struct net_device *ndev)
 {
@@ -68,7 +82,7 @@ static int my_close(struct net_device *ndev)
 	free_irq(priv->irq, priv);
 	
 	// .openで呼び出していないので、ここで呼ぶ必要はないはず
-  　　// netif_stop_queue(dev);
+	// netif_stop_queue(dev);
 	
 	return 0;
 	
@@ -85,7 +99,7 @@ static int my_xmit(struct sk_buff *skb, struct net_device *dev)
 }
 
 // .ndo_gハンドラを用意する
-static int my_get_stats(bcmgenet_get_stats)
+static int my_get_stats(struct net_device *dev)
 {
 	// 特にまだ何もしない
 	printk("my_get_stats(): Hi there, I'm the bookkeeper!\n");
@@ -94,28 +108,13 @@ static int my_get_stats(bcmgenet_get_stats)
 
 }
 
-// 受信ハンドラを用意する
-static irqreturn_t my_isr(int irq, void *dev_id)
-{
-	// my_privへの型変換
-	struct my_priv *priv = (struct my_priv *)dev_id;
-	
-	// 割り込みがあった
-	printk("my_isr(): Hi there, there was an interrupt\n");
-	printk("my_isr(): interrupt with an irq of %d\n", irq);
-	printk("my_isr(): device with an irq of %d\n", priv->irq);
-	
-	return IRQ_HANDLED;
-}
-
-
 // net_device_opsを定義する
 static const struct net_device_ops my_netdev_ops {
 	.ndo_open		= my_open,
 	.ndo_stop		= my_close,
 	.ndo_start_xmit		= my_xmit,
 	.ndo_get_stats		= my_get_stats,
-}
+};
 
 // probe関数を用意する
 static int my_platform_device_probe(struct platform_device *pdev)
@@ -160,7 +159,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	}
 	
 	// mmioの物理アドレスを仮想アドレスに変換する
-	printk("my_platform_device_probe(): the mmio physical address is %p\n", rsc->start);
+	printk("my_platform_device_probe(): the mmio physical address is %lld\n", rsc->start);
 	priv->base = ioremap(rsc->start, rsc->end - rsc->start + 1);
 	if (!priv->base) {
 		printk("my_platform_device_probe(): failed to get the mmio physical address\n");
@@ -174,13 +173,23 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	// 物理デバイスに対して仮想デバイスを紐づける
 	dev_set_drvdata(&pdev->dev, ndev);
 	
+	// opsとndevを紐づける
+	ndev->netdev_ops = &my_netdev_ops;
+	
 	// 一通りできたら以下を呼ぶ
-	// register_netdev()
+	err = register_netdev(ndev)
+	if (err)
+	{
+		printk(KERN_INFO "my_platform_device_probe(): error registering ndev\n");
+		goto err;
+	}
+	
+	printk(KERN_INFO "my_platform_device_probe(): successfully registered ndev\n");
 	
 	// 一連のprobeを完了
 	printk(KERN_INFO "my_platform_device_probe(): probing completed\n");
 	
-	return 0;
+	return err;
 	
 err:
 	free_netdev(ndev);
