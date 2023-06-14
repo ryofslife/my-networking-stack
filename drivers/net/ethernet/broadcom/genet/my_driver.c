@@ -37,6 +37,86 @@
 
 #define DRIVER_NAME "RYOZ_DRIVER"
 
+// .openハンドラを用意する
+static int my_open(struct net_device *ndev)
+{
+	struct my_priv *priv = netdev_priv(ndev);
+	int ret;
+	
+	// irqの登録を行う
+ 	ret = request_irq(priv->irq, my_isr, IRQF_SHARED, ndev->name, priv);
+	if (ret < 0) {
+		printk("my_open(): failed to register my receive handler\n");
+		return -1;
+	}
+	
+	printk("my_open(): successfully registered my receive handler\n");
+	
+	// これは受信するだけなら呼ぶ必要はないはず？
+	// netif_start_queue(dev);
+	
+	return 0;
+		
+}
+
+// .stopハンドラを用意する
+static int my_close(struct net_device *ndev)
+{
+	struct my_priv *priv = netdev_priv(ndev);
+	
+	// irqの解除を行う
+	free_irq(priv->irq, priv);
+	
+	// .openで呼び出していないので、ここで呼ぶ必要はないはず
+  　　// netif_stop_queue(dev);
+	
+	return 0;
+	
+}
+
+// .ndo_start_xmitハンドラを用意する
+static int my_xmit(struct sk_buff *skb, struct net_device *dev)
+{
+	// 特にまだ何もしない
+	printk("my_xmit(): I'm not yet supposed to be called...\n");
+	
+	return 0;
+	
+}
+
+// .ndo_gハンドラを用意する
+static int my_get_stats(bcmgenet_get_stats)
+{
+	// 特にまだ何もしない
+	printk("my_get_stats(): Hi there, I'm the bookkeeper!\n");
+	
+	return 0;
+
+}
+
+// 受信ハンドラを用意する
+static irqreturn_t my_isr(int irq, void *dev_id)
+{
+	// my_privへの型変換
+	struct my_priv *priv = (struct my_priv *)dev_id;
+	
+	// 割り込みがあった
+	printk("my_isr(): Hi there, there was an interrupt\n");
+	printk("my_isr(): interrupt with an irq of %d\n", irq);
+	printk("my_isr(): device with an irq of %d\n", priv->irq);
+	
+	return IRQ_HANDLED;
+}
+
+
+// net_device_opsを定義する
+static const struct net_device_ops my_netdev_ops {
+	.ndo_open		= my_open,
+	.ndo_stop		= my_close,
+	.ndo_start_xmit		= my_xmit,
+	.ndo_get_stats		= my_get_stats,
+}
+
 // probe関数を用意する
 static int my_platform_device_probe(struct platform_device *pdev)
 {
@@ -80,6 +160,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	}
 	
 	// mmioの物理アドレスを仮想アドレスに変換する
+	printk("my_platform_device_probe(): the mmio physical address is %p\n", rsc->start);
 	priv->base = ioremap(rsc->start, rsc->end - rsc->start + 1);
 	if (!priv->base) {
 		printk("my_platform_device_probe(): failed to get the mmio physical address\n");
@@ -115,7 +196,7 @@ static int my_platform_device_remove(struct platform_device *pdev)
 	free_netdev(ndev);
 	
     // 完了
-    printk(KERN_INFO "my_platform_device_remove(): successfully removedthe device\n");
+    printk(KERN_INFO "my_platform_device_remove(): successfully removed the device\n");
 	
     return 0;
 }
@@ -125,13 +206,13 @@ static const struct of_device_id nic_match[] = {
 	// { .compatible = "brcm,bcm2711-genet-v5" },
 	// {},
 	
-	{ .compatible = "brcm,genet-v1" },
-	{ .compatible = "brcm,genet-v2" },
-	{ .compatible = "brcm,genet-v3" },
-	{ .compatible = "brcm,genet-v4" },
-	{ .compatible = "brcm,genet-v5" },
+	// { .compatible = "brcm,genet-v1" },
+	// { .compatible = "brcm,genet-v2" },
+	// { .compatible = "brcm,genet-v3" },
+	// { .compatible = "brcm,genet-v4" },
+	// { .compatible = "brcm,genet-v5" },
 	{ .compatible = "brcm,bcm2711-genet-v5" },
-	{ .compatible = "brcm,bcm7712-genet-v5" },
+	// { .compatible = "brcm,bcm7712-genet-v5" },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, nic_match);
