@@ -109,7 +109,7 @@ static int my_get_stats(struct net_device *dev)
 }
 
 // net_device_opsを定義する
-static const struct net_device_ops my_netdev_ops {
+static const struct net_device_ops my_netdev_ops = {
 	.ndo_open		= my_open,
 	.ndo_stop		= my_close,
 	.ndo_start_xmit		= my_xmit,
@@ -125,6 +125,8 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	struct net_device *ndev;
 	// platform_get_resource()用
 	struct resource *rsc;
+	
+	int oops;
 	
 	// single queueで仮想デバイスをprovisionする
 	ndev = alloc_etherdev(sizeof(priv));
@@ -177,8 +179,8 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	ndev->netdev_ops = &my_netdev_ops;
 	
 	// 一通りできたら以下を呼ぶ
-	err = register_netdev(ndev)
-	if (err)
+	oops = register_netdev(ndev);
+	if (oops)
 	{
 		printk(KERN_INFO "my_platform_device_probe(): error registering ndev\n");
 		goto err;
@@ -189,7 +191,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	// 一連のprobeを完了
 	printk(KERN_INFO "my_platform_device_probe(): probing completed\n");
 	
-	return err;
+	return oops;
 	
 err:
 	free_netdev(ndev);
