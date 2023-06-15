@@ -128,6 +128,8 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	
 	int oops;
 	
+	printk("my_platform_device_probe(): the device being probed is %d\n", *pdev->name);
+	
 	// single queueで仮想デバイスをprovisionする
 	ndev = alloc_etherdev(sizeof(priv));
 	if (ndev)
@@ -177,6 +179,11 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	
 	// opsとndevを紐づける
 	ndev->netdev_ops = &my_netdev_ops;
+	
+	// NICの初期化を行う
+	err = bcmgenet_mii_init(ndev);
+	if (err)
+		goto err;
 	
 	// 一通りできたら以下を呼ぶ
 	oops = register_netdev(ndev);
