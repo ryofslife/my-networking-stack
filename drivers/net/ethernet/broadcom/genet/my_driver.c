@@ -127,6 +127,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	struct resource *rsc;
 	
 	int oops;
+	int ooops;
 	
 	printk("my_platform_device_probe(): the device being probed is %d\n", *pdev->name);
 	
@@ -181,13 +182,13 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	ndev->netdev_ops = &my_netdev_ops;
 	
 	// NICの初期化を行う
-	err = bcmgenet_mii_init(ndev);
-	if (err)
+	oops = bcmgenet_mii_init(ndev);
+	if (oops)
 		goto err;
 	
 	// 一通りできたら以下を呼ぶ
-	oops = register_netdev(ndev);
-	if (oops)
+	ooops = register_netdev(ndev);
+	if (ooops)
 	{
 		printk(KERN_INFO "my_platform_device_probe(): error registering ndev\n");
 		goto err;
