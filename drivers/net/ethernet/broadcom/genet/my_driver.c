@@ -119,6 +119,8 @@ static const struct net_device_ops my_netdev_ops = {
 // probe関数を用意する
 static int my_platform_device_probe(struct platform_device *pdev)
 {
+	// デバイス固有のパラメータを置いておく用
+	struct bcmgenet_platform_data *pd = pdev->dev.platform_data;
 	// 物理デバイス用
 	struct my_priv *priv;
 	// 仮想デバイス用
@@ -182,8 +184,12 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	ndev->netdev_ops = &my_netdev_ops;
 	
 	// privにndevとpdevを投入する
-	priv->dev = dev;
+	priv->ndev = ndev;
 	priv->pdev = pdev;
+	
+	// genetのversionは5のハズ、デバイスツリーからversionを取得して置いておく
+	// device_nodeに対してcompatibleなMDIO bus node?を探索するのに必要ぽい
+	priv->version = pd->genet_version;
 	
 	// etherコントローラのphy-modeを吐かせる
 	printk(KERN_INFO "phy-mode: %d\n", device_get_phy_mode(&pdev->dev));
