@@ -181,6 +181,13 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	// opsとndevを紐づける
 	ndev->netdev_ops = &my_netdev_ops;
 	
+	// privにndevとpdevを投入する
+	priv->dev = dev;
+	priv->pdev = pdev;
+	
+	// etherコントローラのphy-modeを吐かせる
+	printk(KERN_INFO "phy-mode: %d\n", device_get_phy_mode(&pdev->dev));
+	
 	// NICの初期化を行う
 	oops = bcmgenet_mii_init(ndev);
 	if (oops)

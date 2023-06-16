@@ -24,6 +24,7 @@
 #include <linux/platform_data/mdio-bcm-unimac.h>
 
 #include "bcmgenet.h"
+#include "my_driver.h"
 
 static void bcmgenet_mac_config(struct net_device *dev)
 {
@@ -392,7 +393,7 @@ int bcmgenet_mii_probe(struct net_device *dev)
 	return 0;
 }
 
-static struct device_node *bcmgenet_mii_of_find_mdio(struct bcmgenet_priv *priv)
+static struct device_node *bcmgenet_mii_of_find_mdio(struct my_priv *priv)
 {
 	struct device_node *dn = priv->pdev->dev.of_node;
 	struct device *kdev = &priv->pdev->dev;
@@ -412,21 +413,23 @@ static struct device_node *bcmgenet_mii_of_find_mdio(struct bcmgenet_priv *priv)
 	return priv->mdio_dn;
 }
 
-static void bcmgenet_mii_pdata_init(struct bcmgenet_priv *priv,
+static void bcmgenet_mii_pdata_init(struct my_priv *priv,
 				    struct unimac_mdio_pdata *ppd)
 {
 	struct device *kdev = &priv->pdev->dev;
-	struct bcmgenet_platform_data *pd = kdev->platform_data;
+	
+	// 以下はphy-modeがラズパイのNICとは異なるはずなのでどのみち呼ばれないハズ
+	// struct bcmgenet_platform_data *pd = kdev->platform_data;
 
-	if (pd->phy_interface != PHY_INTERFACE_MODE_MOCA && pd->mdio_enabled) {
-		/*
-		 * Internal or external PHY with MDIO access
-		 */
-		if (pd->phy_address >= 0 && pd->phy_address < PHY_MAX_ADDR)
-			ppd->phy_mask = 1 << pd->phy_address;
-		else
-			ppd->phy_mask = 0;
-	}
+	// if (pd->phy_interface != PHY_INTERFACE_MODE_MOCA && pd->mdio_enabled) {
+		// /*
+		 // * Internal or external PHY with MDIO access
+		 // */
+		// if (pd->phy_address >= 0 && pd->phy_address < PHY_MAX_ADDR)
+			// ppd->phy_mask = 1 << pd->phy_address;
+		// else
+			// ppd->phy_mask = 0;
+	// }
 }
 
 static int bcmgenet_mii_wait(void *wait_func_data)
@@ -440,7 +443,7 @@ static int bcmgenet_mii_wait(void *wait_func_data)
 	return 0;
 }
 
-static int bcmgenet_mii_register(struct bcmgenet_priv *priv)
+static int bcmgenet_mii_register(struct my_priv *priv)
 {
 	struct platform_device *pdev = priv->pdev;
 	struct bcmgenet_platform_data *pdata = pdev->dev.platform_data;
@@ -506,7 +509,7 @@ out:
 	return ret;
 }
 
-static int bcmgenet_phy_interface_init(struct bcmgenet_priv *priv)
+static int bcmgenet_phy_interface_init(struct my_priv *priv)
 {
 	struct device *kdev = &priv->pdev->dev;
 	int phy_mode = device_get_phy_mode(kdev);
@@ -529,7 +532,7 @@ static int bcmgenet_phy_interface_init(struct bcmgenet_priv *priv)
 	return 0;
 }
 
-static int bcmgenet_mii_of_init(struct bcmgenet_priv *priv)
+static int bcmgenet_mii_of_init(struct my_priv *priv)
 {
 	struct device_node *dn = priv->pdev->dev.of_node;
 	struct phy_device *phydev;
@@ -566,7 +569,7 @@ static int bcmgenet_mii_of_init(struct bcmgenet_priv *priv)
 	return 0;
 }
 
-static int bcmgenet_mii_pd_init(struct bcmgenet_priv *priv)
+static int bcmgenet_mii_pd_init(struct my_priv *priv)
 {
 	struct device *kdev = &priv->pdev->dev;
 	struct bcmgenet_platform_data *pd = kdev->platform_data;
@@ -618,7 +621,7 @@ static int bcmgenet_mii_pd_init(struct bcmgenet_priv *priv)
 	return 0;
 }
 
-static int bcmgenet_mii_bus_init(struct bcmgenet_priv *priv)
+static int bcmgenet_mii_bus_init(struct my_priv *priv)
 {
 	struct device *kdev = &priv->pdev->dev;
 	struct device_node *dn = kdev->of_node;
@@ -633,7 +636,7 @@ static int bcmgenet_mii_bus_init(struct bcmgenet_priv *priv)
 
 int bcmgenet_mii_init(struct net_device *dev)
 {
-	struct bcmgenet_priv *priv = netdev_priv(dev);
+	struct my_priv *priv = netdev_priv(dev);
 	int ret;
 
 	ret = bcmgenet_mii_register(priv);
@@ -653,7 +656,7 @@ out:
 
 void bcmgenet_mii_exit(struct net_device *dev)
 {
-	struct bcmgenet_priv *priv = netdev_priv(dev);
+	struct my_priv *priv = netdev_priv(dev);
 	struct device_node *dn = priv->pdev->dev.of_node;
 
 	if (of_phy_is_fixed_link(dn))
