@@ -1,7 +1,8 @@
 # Custom network stack for Raspberry Pi.
 
 I'm working on a built-in network stack for the Linux kernel. 
-It's purely for educational purpose😏.
+It's purely for educational purpose😏. If you want to  know the details of implementation, here are the notes on all the researching I did for writing the programs.<br /> 
+https://scrapbox.io/ryozioput/
 
 ```
 ┌──(kali㉿kali-raspberry-pi)-[~]
