@@ -42,7 +42,7 @@
 
 #include "bcmgenet.h"
 
-// #include <net/my_net.h>
+#include <net/my_net.h>
 
 // #include "my_driver.h"
 
