@@ -18,7 +18,8 @@
 
 #include "../unimac.h"
 
-#include "my_driver.h"
+// 自分のヘッダファイルと両方で呼び出すとおかしなことになる？
+// #include "my_driver.h"
 
 /* total number of Buffer Descriptors, same for Rx/Tx */
 #define TOTAL_DESC				256
@@ -687,15 +688,6 @@ GENET_IO_MACRO(hfb_reg, priv->hw_params->hfb_reg_offset);
 
 /* RBUF register accessors */
 GENET_IO_MACRO(rbuf, GENET_RBUF_OFF);
-
-// 自分用に再定義する、とりあえずこっちのヘッダファイルに置いておく
-static inline u32 my_umac_readl(struct my_priv *priv, u32 off)
-{	
-	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) 
-		return __raw_readl(priv->base + GENET_UMAC_OFF + off);		
-	else								
-		return readl_relaxed(priv->base + GENET_UMAC_OFF + off);	
-}
 
 /* MDIO routines */
 int bcmgenet_mii_init(struct net_device *dev);

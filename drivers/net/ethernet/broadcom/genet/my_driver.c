@@ -30,7 +30,8 @@
 
 #include <asm/unaligned.h>
 
-#include "bcmgenet.h"
+// 既に自分のヘッダファイルに含まれているから必要ない？
+// #include "bcmgenet.h"
 
 #include "my_driver.h"
 

@@ -37,3 +37,11 @@ struct my_priv {
 	
 };
 									
+// 自分用に再定義する、とりあえずこっちのヘッダファイルに置いておく
+static inline u32 my_umac_readl(struct my_priv *priv, u32 off)
+{	
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) 
+		return __raw_readl(priv->base + GENET_UMAC_OFF + off);		
+	else								
+		return readl_relaxed(priv->base + GENET_UMAC_OFF + off);	
+}
