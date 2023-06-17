@@ -588,7 +588,7 @@ static int bcmgenet_mii_pd_init(struct my_priv *priv)
 		/*
 		 * Internal or external PHY with MDIO access
 		 */
-		phydev = phy_attach(priv->dev, phy_name, pd->phy_interface);
+		phydev = phy_attach(priv->ndev, phy_name, pd->phy_interface);
 		if (IS_ERR(phydev)) {
 			dev_err(kdev, "failed to register PHY device\n");
 			return PTR_ERR(phydev);
