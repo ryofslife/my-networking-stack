@@ -121,7 +121,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 {
 	// デバイス固有のパラメータを置いておく用
 	// struct bcmgenet_platform_data *pd = pdev->dev.platform_data;
-	const struct bcmgenet_plat_data *pdata;
+	// const struct bcmgenet_plat_data *pdata;
 	// 物理デバイス用
 	struct my_priv *priv;
 	// 仮想デバイス用
@@ -194,8 +194,8 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	// genetのversionは5のハズ、デバイスツリーからversionを取得して置いておく
 	// device_nodeに対してcompatibleなMDIO bus node?を探索するのに必要ぽい
 	// priv->version = pd->genet_version;
-	pdata = device_get_match_data(&pdev->dev);
-	priv->version = pdata->version;
+	// pdata = device_get_match_data(&pdev->dev);
+	priv->version = GENET_V5;
 	
 	// etherコントローラのphy-modeを吐かせる
 	// いったんコメントアウト
