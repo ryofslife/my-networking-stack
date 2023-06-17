@@ -168,7 +168,8 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	}
 	
 	// mmioの物理アドレスを仮想アドレスに変換する
-	printk("my_platform_device_probe(): the mmio physical address is %lld\n", rsc->start);
+	// いったんコメントアウト
+	// printk("my_platform_device_probe(): the mmio physical address is %lld\n", rsc->start);
 	priv->base = ioremap(rsc->start, rsc->end - rsc->start + 1);
 	if (!priv->base) {
 		printk("my_platform_device_probe(): failed to get the mmio physical address\n");
@@ -194,7 +195,8 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	priv->version = pd->genet_version;
 	
 	// etherコントローラのphy-modeを吐かせる
-	printk(KERN_INFO "phy-mode: %d\n", device_get_phy_mode(&pdev->dev));
+	// いったんコメントアウト
+	// printk(KERN_INFO "phy-mode: %d\n", device_get_phy_mode(&pdev->dev));
 	
 	// NICの初期化を行う
 	oops = bcmgenet_mii_init(ndev);
