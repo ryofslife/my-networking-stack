@@ -689,20 +689,13 @@ GENET_IO_MACRO(hfb_reg, priv->hw_params->hfb_reg_offset);
 GENET_IO_MACRO(rbuf, GENET_RBUF_OFF);
 
 // 自分用に再定義する、とりあえずこっちのヘッダファイルに置いておく
-#define MY_IO_MACRO(name, offset)					\
-static inline u32 my_##name##_readl(struct my_priv *priv,	\
-					u32 off)			\
-{									\
-	/* MIPS chips strapped for BE will automagically configure the	\
-	 * peripheral registers for CPU-native byte order.		\
-	 */								\
-	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) \
-		return __raw_readl(priv->base + offset + off);		\
-	else								\
-		return readl_relaxed(priv->base + offset + off);	\
-}									\
-
-MY_IO_MACRO(umac, GENET_UMAC_OFF);
+static inline u32 my_umac_readl(struct my_priv *priv, u32 off)
+{	
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) 
+		return __raw_readl(priv->base + GENET_UMAC_OFF + off);		
+	else								
+		return readl_relaxed(priv->base + GENET_UMAC_OFF + off);	
+}
 
 /* MDIO routines */
 int bcmgenet_mii_init(struct net_device *dev);

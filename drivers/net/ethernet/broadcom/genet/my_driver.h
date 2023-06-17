@@ -10,13 +10,7 @@
 
 #include "../unimac.h"
 
-enum bcmgenet_version {
-	GENET_V1 = 1,
-	GENET_V2,
-	GENET_V3,
-	GENET_V4,
-	GENET_V5
-};
+#include "bcmgenet.h"
 
 // 自分が定義するデバイス固有の情報を置いておく
 struct my_priv {
@@ -42,3 +36,4 @@ struct my_priv {
 	wait_queue_head_t wq;
 	
 };
+									
