@@ -651,7 +651,7 @@ struct bcmgenet_priv {
 };
 
 #define GENET_IO_MACRO(name, offset)					\
-static inline u32 bcmgenet_##name##_readl(struct my_priv *priv,	\
+static inline u32 bcmgenet_##name##_readl(struct bcmgenet_priv *priv,	\
 					u32 off)			\
 {									\
 	/* MIPS chips strapped for BE will automagically configure the	\
@@ -662,7 +662,28 @@ static inline u32 bcmgenet_##name##_readl(struct my_priv *priv,	\
 	else								\
 		return readl_relaxed(priv->base + offset + off);	\
 }									\
-static inline void bcmgenet_##name##_writel(struct my_priv *priv,	\
+static inline void bcmgenet_##name##_writel(struct bcmgenet_priv *priv,	\
+					u32 val, u32 off)		\
+{									\
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) \
+		__raw_writel(val, priv->base + offset + off);		\
+	else								\
+		writel_relaxed(val, priv->base + offset + off);		\
+}
+
+#define GENET_IO_MACRO(name, offset)					\
+static inline u32 my_##name##_readl(struct my_priv *priv,	\
+					u32 off)			\
+{									\
+	/* MIPS chips strapped for BE will automagically configure the	\
+	 * peripheral registers for CPU-native byte order.		\
+	 */								\
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) \
+		return __raw_readl(priv->base + offset + off);		\
+	else								\
+		return readl_relaxed(priv->base + offset + off);	\
+}									\
+static inline void my_##name##_writel(struct my_priv *priv,	\
 					u32 val, u32 off)		\
 {									\
 	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) \
