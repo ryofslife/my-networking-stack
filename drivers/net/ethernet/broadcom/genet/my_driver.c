@@ -34,7 +34,6 @@
 
 #include "my_driver.h"
 
-
 #define DRIVER_NAME "RYOZ_DRIVER"
 
 // 受信ハンドラを用意する
@@ -200,6 +199,9 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	// etherコントローラのphy-modeを吐かせる
 	// いったんコメントアウト
 	// printk(KERN_INFO "phy-mode: %d\n", device_get_phy_mode(&pdev->dev));
+	
+	// mii起動するまでのqueueを初期化
+	init_waitqueue_head(&priv->wq);
 	
 	// NICの初期化を行う
 	oops = bcmgenet_mii_init(ndev);

@@ -44,6 +44,8 @@
 
 #include <net/my_net.h>
 
+#include "my_driver.h"
+
 /* Maximum number of hardware queues, downsized if needed */
 #define GENET_MAX_MQ_CNT	4
 

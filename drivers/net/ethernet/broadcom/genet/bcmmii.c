@@ -434,7 +434,7 @@ static void bcmgenet_mii_pdata_init(struct my_priv *priv,
 
 static int bcmgenet_mii_wait(void *wait_func_data)
 {
-	struct bcmgenet_priv *priv = wait_func_data;
+	struct my_priv *priv = wait_func_data;
 
 	wait_event_timeout(priv->wq,
 			   !(bcmgenet_umac_readl(priv, UMAC_MDIO_CMD)

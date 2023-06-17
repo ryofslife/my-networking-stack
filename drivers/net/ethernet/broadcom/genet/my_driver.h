@@ -31,5 +31,6 @@ struct my_priv {
 	// その他
 	bool internal_phy;
 	struct platform_device *mii_pdev;
+	wait_queue_head_t wq;
 	
 };
