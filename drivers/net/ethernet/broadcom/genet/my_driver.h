@@ -9,11 +9,14 @@ struct my_priv {
 	struct net_device *ndev;
 	// probe時に投入する、pdevはkernelから渡されるデバイスツリーに基づくデバイスの情報
 	struct platform_device *pdev;
-	
-	enum bcmgenet_version version;
-	struct device_node *phy_dn;
-	struct device_node *mdio_dn;
+	// phy-mode
 	phy_interface_t phy_interface;
+	// etherコントローラのversion、compatibleなmdioを探索する際に必要
+	enum bcmgenet_version version;
+	struct device_node *mdio_dn;
+	// PHY phandle?
+	struct device_node *phy_dn;
+	// その他
 	bool internal_phy;
 	struct platform_device *mii_pdev;
 	

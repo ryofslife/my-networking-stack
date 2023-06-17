@@ -526,6 +526,7 @@ static int bcmgenet_phy_interface_init(struct my_priv *priv)
 	 * over MDIO as we may have shut down the internal PHY for power
 	 * saving purposes.
 	 */
+	// ラズパイはのphy-modeはinternal phyではないはずなのでここはfalseのはず
 	if (priv->phy_interface == PHY_INTERFACE_MODE_INTERNAL)
 		priv->internal_phy = true;
 
