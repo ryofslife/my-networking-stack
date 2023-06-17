@@ -131,7 +131,9 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	int oops;
 	int ooops;
 	
-	printk("my_platform_device_probe(): the device being probed is %d\n", *pdev->name);
+	// たぶんtanslation faultを起こしている、kernel panicを追いかける題材にしたら面白いはず
+	// いったんコメントアウト
+	// printk("my_platform_device_probe(): the device being probed is %d\n", *pdev->name);
 	
 	// single queueで仮想デバイスをprovisionする
 	ndev = alloc_etherdev(sizeof(priv));
