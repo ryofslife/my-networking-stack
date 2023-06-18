@@ -12,6 +12,12 @@
 
 #include "bcmgenet.h"
 
+// hwに関するパラメータを置いておく
+struct my_hw_params {
+	// baseから始まるリングバッファブロック一つ分のデータ部の大きさ
+	u32 rdma_offset;
+}
+
 // 自分が定義するデバイス固有の情報を置いておく
 struct my_priv {
 	
@@ -30,6 +36,11 @@ struct my_priv {
 	struct device_node *mdio_dn;
 	// PHY phandle?
 	struct device_node *phy_dn;
+	// dma周り、RXリングバッファのブロック数を定義している
+	unsigned int num_rx_bds;
+	//　dma周り、RXリングバッファのブロックの構造を定義している
+	struct enet_cb *rx_cbs;
+	
 	// その他
 	bool internal_phy;
 	struct platform_device *mii_pdev;

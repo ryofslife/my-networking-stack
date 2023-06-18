@@ -55,7 +55,19 @@ static irqreturn_t my_isr(int irq, void *dev_id)
 static int my_open(struct net_device *ndev)
 {
 	struct my_priv *priv = netdev_priv(ndev);
+	struct enet_cb *cb;
 	int ret;
+
+	// RXリングバッファ分のメモリを確保する
+	// とりあえずまだ必要ないのでコメントアウトしておく
+	priv->rx_bds = priv->base + priv->hw_params->rdma_offset;
+	// リングバッファのコントロールブロックの個数、256個用意する
+	priv->num_rx_bds = TOTAL_DESC;
+	// priv->num_rx_bds個分のバッファコントロールブロック(enet_cb)の配列を確保する
+	priv->rx_cbs = kcalloc(priv->num_rx_bds, sizeof(struct enet_cb), GFP_KERNEL);
+	if (!priv->rx_cbs)
+		printk("my_open(): failed to allocate memory for RX ring buffer\n");
+		return -ENOMEM;
 	
 	// irqの登録を行う
  	ret = request_irq(priv->irq, my_isr, IRQF_SHARED, ndev->name, priv);
@@ -119,9 +131,6 @@ static const struct net_device_ops my_netdev_ops = {
 // probe関数を用意する
 static int my_platform_device_probe(struct platform_device *pdev)
 {
-	// デバイス固有のパラメータを置いておく用
-	// struct bcmgenet_platform_data *pd = pdev->dev.platform_data;
-	// const struct bcmgenet_plat_data *pdata;
 	// 物理デバイス用
 	struct my_priv *priv;
 	// 仮想デバイス用
@@ -132,9 +141,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	int oops;
 	int ooops;
 	
-	// たぶんtanslation faultを起こしている、kernel panicを追いかける題材にしたら面白いはず
-	// いったんコメントアウト
-	// printk("my_platform_device_probe(): the device being probed is %d\n", *pdev->name);
+	printk("my_platform_device_probe(): the device being probed is %d\n", *pdev->name);
 	
 	// single queueで仮想デバイスをprovisionする
 	ndev = alloc_etherdev(sizeof(priv));
@@ -169,8 +176,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	}
 	
 	// mmioの物理アドレスを仮想アドレスに変換する
-	// いったんコメントアウト
-	// printk("my_platform_device_probe(): the mmio physical address is %lld\n", rsc->start);
+	printk("my_platform_device_probe(): the mmio physical address is %lld\n", rsc->start);
 	priv->base = ioremap(rsc->start, rsc->end - rsc->start + 1);
 	if (!priv->base) {
 		printk("my_platform_device_probe(): failed to get the mmio physical address\n");
@@ -193,13 +199,10 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	
 	// genetのversionは5のハズ、デバイスツリーからversionを取得して置いておく
 	// device_nodeに対してcompatibleなMDIO bus node?を探索するのに必要ぽい
-	// priv->version = pd->genet_version;
-	// pdata = device_get_match_data(&pdev->dev);
 	priv->version = GENET_V5;
 	
 	// etherコントローラのphy-modeを吐かせる
-	// いったんコメントアウト
-	// printk(KERN_INFO "phy-mode: %d\n", device_get_phy_mode(&pdev->dev));
+	printk(KERN_INFO "phy-mode: %d\n", device_get_phy_mode(&pdev->dev));
 	
 	// mii起動するまでのqueueを初期化
 	init_waitqueue_head(&priv->wq);
@@ -217,9 +220,8 @@ static int my_platform_device_probe(struct platform_device *pdev)
 		goto err;
 	}
 	
-	printk(KERN_INFO "my_platform_device_probe(): successfully registered ndev\n");
-	
 	// 一連のprobeを完了
+	printk(KERN_INFO "my_platform_device_probe(): successfully registered ndev\n");
 	printk(KERN_INFO "my_platform_device_probe(): probing completed\n");
 	
 	return oops;
