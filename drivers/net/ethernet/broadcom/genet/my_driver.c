@@ -180,7 +180,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	// mmio用の物理アドレス領域を確保する
 	if (!request_mem_region(rsc->start, rsc->end - rsc->start + 1, pdev->name)) 
 	{
-		printk_err("request_mem_region failed.\n");
+		printk("request_mem_region failed.\n");
 		goto err;
     } else {
 		printk("my_platform_device_probe(): successfully allocated mmio region");
