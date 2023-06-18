@@ -55,7 +55,6 @@ static irqreturn_t my_isr(int irq, void *dev_id)
 static int my_open(struct net_device *ndev)
 {
 	struct my_priv *priv = netdev_priv(ndev);
-	struct enet_cb *cb;
 	int ret;
 
 	// RXリングバッファ分のメモリを確保する
@@ -176,6 +175,15 @@ static int my_platform_device_probe(struct platform_device *pdev)
 		goto err;
 	} else {
 		printk("my_platform_device_probe(): successfully got the list of resources\n");
+	}
+	
+	// mmio用の物理アドレス領域を確保する
+	if (!request_mem_region(rsc->start, rsc->end - rsc->start + 1, pdev->name)) 
+	{
+		printk_err("request_mem_region failed.\n");
+		goto err;
+    } else {
+		printk("my_platform_device_probe(): successfully allocated mmio region");
 	}
 	
 	// mmioの物理アドレスを仮想アドレスに変換する
