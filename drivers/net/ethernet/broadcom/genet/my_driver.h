@@ -16,7 +16,7 @@
 struct my_hw_params {
 	// baseから始まるリングバッファブロック一つ分のデータ部の大きさ
 	u32 rdma_offset;
-}
+};
 
 // 自分が定義するデバイス固有の情報を置いておく
 struct my_priv {

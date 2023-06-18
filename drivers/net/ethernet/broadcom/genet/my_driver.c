@@ -60,18 +60,21 @@ static int my_open(struct net_device *ndev)
 
 	// RXリングバッファ分のメモリを確保する
 	// とりあえずまだ必要ないのでコメントアウトしておく
-	priv->rx_bds = priv->base + priv->hw_params->rdma_offset;
+	// priv->rx_bds = priv->base + priv->hw_params->rdma_offset;
 	// リングバッファのコントロールブロックの個数、256個用意する
 	priv->num_rx_bds = TOTAL_DESC;
 	// priv->num_rx_bds個分のバッファコントロールブロック(enet_cb)の配列を確保する
 	priv->rx_cbs = kcalloc(priv->num_rx_bds, sizeof(struct enet_cb), GFP_KERNEL);
-	if (!priv->rx_cbs)
+	if (!priv->rx_cbs) 
+	{
 		printk("my_open(): failed to allocate memory for RX ring buffer\n");
 		return -ENOMEM;
+	}
 	
 	// irqの登録を行う
  	ret = request_irq(priv->irq, my_isr, IRQF_SHARED, ndev->name, priv);
-	if (ret < 0) {
+	if (ret < 0) 
+	{
 		printk("my_open(): failed to register my receive handler\n");
 		return -1;
 	}
