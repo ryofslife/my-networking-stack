@@ -12,10 +12,21 @@
 
 #include "bcmgenet.h"
 
-// hwに関するパラメータを置いておく
+// デバイスspecificなパラメータ
 struct my_hw_params {
 	// baseから始まるリングバッファブロック一つ分のデータ部の大きさ
 	u32 rdma_offset;
+	// とりあえず必要、まだ把握できていない
+	u32 words_per_bd;
+};
+
+// DMA channel base番地からそれぞれのレジスタ番地へのoffset
+// dma channel ２をNICは使用している
+static const u8 my_dma_regs[] = {
+	// control and statusレジスタ
+	[DMA_RING_CFG]		= 0x00,
+	// コントロールレジスタ
+	[DMA_CTRL]		= 0x04,
 };
 
 // 自分が定義するデバイス固有の情報を置いておく
@@ -40,6 +51,8 @@ struct my_priv {
 	unsigned int num_rx_bds;
 	//　dma周り、RXリングバッファのブロックの構造を定義している
 	struct enet_cb *rx_cbs;
+	// デバイスspecificなパラメータ
+	struct my_hw_params *hw_params;
 	
 	// その他
 	bool internal_phy;

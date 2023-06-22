@@ -37,6 +37,46 @@
 
 #define DRIVER_NAME "RYOZ_DRIVER"
 
+// デバイスspecificなパラメータを投入する
+static struct my_priv my_set_hw_params(struct my_priv *priv)
+{
+	// 何のために用意する必要があるのか把握できたパラメータに関して都度追加する
+	// https://github.com/raspberrypi/linux/blob/96110e96f1a82e236afb9a248258f1ef917766e9/drivers/net/ethernet/broadcom/genet/bcmgenet.c#L3758
+	
+	// ???
+	priv->hw_params->rdma_offset = 0x2000;
+	priv->hw_params->words_per_bd = 3;
+	
+	
+	return priv;
+}
+
+
+// 読み込み処理関数
+static inline u32 my_readl(void __iomem *offset)
+{
+	// これどっちが呼び出されるの？
+	// 把握して呼び出される方だけ残したい
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
+		return __raw_readl(offset);
+	else
+		return readl_relaxed(offset);
+}
+
+// 書き込み処理関数
+
+//　dma無効化処理
+static u32 my_dma_disable(struct my_priv *priv)
+{
+	// 読み込み処理関数を呼び出す
+	// ベースアドレス + dma channel 2へのoffset + 受信リングバッファ分のoffset + 0x04(dmaコントローラ分のoffset)
+	// の番地のbits状態を読み込む
+ 	reg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[DMA_CTRL]);
+ 	
+ 	return reg;
+}
+
+
 // 受信ハンドラを用意する
 static irqreturn_t my_isr(int irq, void *dev_id)
 {
@@ -56,6 +96,10 @@ static int my_open(struct net_device *ndev)
 {
 	struct my_priv *priv = netdev_priv(ndev);
 	int ret;
+	unsigned int dma_ctrl;
+	
+	// dmaコントローラを無効化する
+	dma_ctrl = my_dma_disable(priv);
 
 	// RXリングバッファ分のメモリを確保する
 	// とりあえずまだ必要ないのでコメントアウトしておく
@@ -200,6 +244,9 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	SET_NETDEV_DEV(ndev, &pdev->dev);
 	// 物理デバイスに対して仮想デバイスを紐づける
 	dev_set_drvdata(&pdev->dev, ndev);
+	
+	// privにhwパラメータを置いておく
+	priv = my_set_hw_params(priv)
 	
 	// opsとndevを紐づける
 	ndev->netdev_ops = &my_netdev_ops;
