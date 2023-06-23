@@ -35,6 +35,13 @@
 
 #include "my_driver.h"
 
+// Tx/Rx DMA register offset, skip 256 descriptors(引用)
+#define WORDS_PER_BD(p)		(p->hw_params->words_per_bd)
+#define DMA_DESC_SIZE		(WORDS_PER_BD(priv) * sizeof(u32))
+
+#define GENET_RDMA_REG_OFF	(priv->hw_params->rdma_offset + \
+				TOTAL_DESC * DMA_DESC_SIZE)
+
 #define DRIVER_NAME "RYOZ_DRIVER"
 
 // デバイスspecificなパラメータを投入する
