@@ -128,7 +128,7 @@ static int my_open(struct net_device *ndev)
 	
 	// dmaコントローラを無効化する
 	dma_ctrl = my_dma_disable(priv);
-	printk("my_open(): dma control register has bit state of %u\n", dma_ctrl);
+	printk("my_open(): dma control register has bit state of %lu\n", dma_ctrl);
 
 	// RXリングバッファ分のメモリを確保する
 	// とりあえずまだ必要ないのでコメントアウトしておく
@@ -275,7 +275,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, ndev);
 	
 	// privにhwパラメータを置いておく
-	my_set_hw_params(priv)
+	my_set_hw_params(priv);
 	
 	// opsとndevを紐づける
 	ndev->netdev_ops = &my_netdev_ops;
