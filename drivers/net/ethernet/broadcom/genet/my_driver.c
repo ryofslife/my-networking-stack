@@ -38,7 +38,7 @@
 #define DRIVER_NAME "RYOZ_DRIVER"
 
 // デバイスspecificなパラメータを投入する
-static struct my_priv my_set_hw_params(struct my_priv *priv)
+static void my_set_hw_params(struct my_priv *priv)
 {
 	// 何のために用意する必要があるのか把握できたパラメータに関して都度追加する
 	// https://github.com/raspberrypi/linux/blob/96110e96f1a82e236afb9a248258f1ef917766e9/drivers/net/ethernet/broadcom/genet/bcmgenet.c#L3758
@@ -46,9 +46,7 @@ static struct my_priv my_set_hw_params(struct my_priv *priv)
 	// ???
 	priv->hw_params->rdma_offset = 0x2000;
 	priv->hw_params->words_per_bd = 3;
-	
-	
-	return priv;
+
 }
 
 
@@ -68,12 +66,33 @@ static inline u32 my_readl(void __iomem *offset)
 //　dma無効化処理
 static u32 my_dma_disable(struct my_priv *priv)
 {
+	// ベースアドレスの物理アドレスを置いておく用
+	static phys_addr_t pa;
+	u32 dma_ctrl;
+	
 	// 読み込み処理関数を呼び出す
 	// ベースアドレス + dma channel 2へのoffset + 受信リングバッファ分のoffset + 0x04(dmaコントローラ分のoffset)
 	// の番地のbits状態を読み込む
- 	reg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[DMA_CTRL]);
+ 	dma_ctrl = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[DMA_CTRL]);
+	
+	// ベース番地をダンプする
+	pa = virt_to_phys(priv->base);
+	printk(KERN_INFO "my_dma_disable(): physical address of the NIC's base address: %llu\n", pa);
+	printk("my_dma_disable(): ioremapped logical address of the NIC's base address: %p\n", priv->base);
+	
+	// GENET_RDMA_REG_OFFのオフセット分まで、これが何を意味するのかはまだ把握できていない
+	printk(KERN_INFO "my_dma_disable(): physical address of the NIC's base address + GENET_RDMA_REG_OFF: %llu\n", pa + GENET_RDMA_REG_OFF);
+	printk("my_dma_disable(): ioremapped logical address of the NIC's base address + GENET_RDMA_REG_OFF: %p\n", priv->base + GENET_RDMA_REG_OFF);
+	
+	// dma channel 2の番地をダンプする
+	printk(KERN_INFO "my_dma_disable(): physical address of the NIC's unknown address: %llu\n", pa + GENET_RDMA_REG_OFF);
+	printk("my_dma_disable(): ioremapped logical address of the NIC's unknown address: %p\n", priv->base + GENET_RDMA_REG_OFF);
+	
+	// dmaコントロールレジスタ番地をダンプする
+	printk(KERN_INFO "my_dma_disable(): physical address of the NIC's dma base: %llu\n", pa + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE);
+	printk("my_dma_disable(): ioremapped logical address of the NIC's dma base: %p\n", priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE);
  	
- 	return reg;
+ 	return dma_ctrl;
 }
 
 
@@ -96,10 +115,11 @@ static int my_open(struct net_device *ndev)
 {
 	struct my_priv *priv = netdev_priv(ndev);
 	int ret;
-	unsigned int dma_ctrl;
+	unsigned long dma_ctrl;
 	
 	// dmaコントローラを無効化する
 	dma_ctrl = my_dma_disable(priv);
+	printk("my_open(): dma control register has bit state of %u\n", dma_ctrl);
 
 	// RXリングバッファ分のメモリを確保する
 	// とりあえずまだ必要ないのでコメントアウトしておく
@@ -246,7 +266,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, ndev);
 	
 	// privにhwパラメータを置いておく
-	priv = my_set_hw_params(priv)
+	my_set_hw_params(priv)
 	
 	// opsとndevを紐づける
 	ndev->netdev_ops = &my_netdev_ops;
