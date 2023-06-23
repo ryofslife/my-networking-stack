@@ -66,14 +66,16 @@ static inline u32 my_readl(void __iomem *offset)
 //　dma無効化処理
 static u32 my_dma_disable(struct my_priv *priv)
 {
+	enum dma_reg reg_type;
+	u32 dma_ctrl;
 	// ベースアドレスの物理アドレスを置いておく用
 	static phys_addr_t pa;
-	u32 dma_ctrl;
 	
 	// 読み込み処理関数を呼び出す
 	// ベースアドレス + dma channel 2へのoffset + 受信リングバッファ分のoffset + 0x04(dmaコントローラ分のoffset)
 	// の番地のbits状態を読み込む
- 	dma_ctrl = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[DMA_CTRL]);
+	reg_type = DMA_CTRL;
+ 	dma_ctrl = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
 	
 	// ベース番地をダンプする
 	pa = virt_to_phys(priv->base);

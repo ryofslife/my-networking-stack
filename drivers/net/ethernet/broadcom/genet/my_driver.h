@@ -22,6 +22,10 @@ struct my_hw_params {
 
 // DMA channel base番地からそれぞれのレジスタ番地へのoffset
 // dma channel ２をNICは使用している
+enum dma_reg {
+	DMA_RING_CFG = 0,
+	DMA_CTRL,
+};
 static const u8 my_dma_regs[] = {
 	// control and statusレジスタ
 	[DMA_RING_CFG]		= 0x00,
