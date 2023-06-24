@@ -48,12 +48,13 @@
 static void my_set_hw_params(struct my_priv *priv)
 {
 	struct my_hw_params *mhp;
+	
+	mhp = priv->hw_params;
+	
 	// 何のために用意する必要があるのか把握できたパラメータに関して都度追加する
 	// https://github.com/raspberrypi/linux/blob/96110e96f1a82e236afb9a248258f1ef917766e9/drivers/net/ethernet/broadcom/genet/bcmgenet.c#L3758
 	mhp->rdma_offset = 0x2000;
 	mhp->words_per_bd = 3;
-	
-	priv->hw_params = mhp;
 	
 	return;
 }
