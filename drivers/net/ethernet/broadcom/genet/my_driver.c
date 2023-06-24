@@ -47,6 +47,7 @@
 // デバイスspecificなパラメータを投入する
 static struct my_hw_params *my_set_hw_params(struct my_hw_params *hw_params)
 {	
+	// メモリ確保する、せずにやたら悩んでた
 	hw_params = kmalloc(sizeof(*hw_params), GFP_KERNEL);
 	
 	// 何のために用意する必要があるのか把握できたパラメータに関して都度追加する
@@ -129,8 +130,8 @@ static int my_open(struct net_device *ndev)
 	
 	// dmaコントローラを無効化する
 	// いったんコメントアウト
-	// dma_ctrl = my_dma_disable(priv);
-	// printk("my_open(): dma control register has bit state of %lu\n", dma_ctrl);
+	dma_ctrl = my_dma_disable(priv);
+	printk("my_open(): dma control register has bit state of %lu\n", dma_ctrl);
 
 	// RXリングバッファ分のメモリを確保する
 	// とりあえずまだ必要ないのでコメントアウトしておく
