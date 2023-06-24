@@ -15,9 +15,9 @@
 // デバイスspecificなパラメータ
 struct my_hw_params {
 	// baseから始まるリングバッファブロック一つ分のデータ部の大きさ
-	u32 rdma_offset;
+	unsigned int rdma_offset;
 	// とりあえず必要、まだ把握できていない
-	u32 words_per_bd;
+	unsigned int words_per_bd;
 };
 
 // DMA channel base番地からそれぞれのレジスタ番地へのoffset

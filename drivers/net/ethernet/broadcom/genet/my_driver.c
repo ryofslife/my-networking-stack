@@ -45,18 +45,14 @@
 #define DRIVER_NAME "RYOZ_DRIVER"
 
 // デバイスspecificなパラメータを投入する
-static void my_set_hw_params(struct my_priv *priv)
-{
-	struct my_hw_params *mhp;
-	
-	mhp = priv->hw_params;
-	
+static struct my_hw_params *my_set_hw_params(struct my_hw_params *hw_params)
+{	
 	// 何のために用意する必要があるのか把握できたパラメータに関して都度追加する
 	// https://github.com/raspberrypi/linux/blob/96110e96f1a82e236afb9a248258f1ef917766e9/drivers/net/ethernet/broadcom/genet/bcmgenet.c#L3758
-	mhp->rdma_offset = 0x2000;
-	mhp->words_per_bd = 3;
+	hw_params->rdma_offset = 0x2000;
+	hw_params->words_per_bd = 3;
 	
-	return;
+	return hw_params;
 }
 
 
@@ -216,6 +212,8 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	struct net_device *ndev;
 	// platform_get_resource()用
 	struct resource *rsc;
+	// ハード固有のパラメータ
+	struct my_hw_params *hw_params;
 	
 	int oops;
 	int ooops;
@@ -279,7 +277,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, ndev);
 	
 	// privにhwパラメータを置いておく
-	// my_set_hw_params(priv);
+	priv->hw_params = my_set_hw_params(hw_params);
 	
 	// opsとndevを紐づける
 	ndev->netdev_ops = &my_netdev_ops;
