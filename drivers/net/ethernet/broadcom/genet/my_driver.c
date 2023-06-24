@@ -79,8 +79,8 @@ static inline void my_writel(u32 value, void __iomem *offset)
  		writel_relaxed(value, offset);
 }
 
-//　dma無効化処理
-static u32 my_dma_disable(struct my_priv *priv)
+//　dmaを無効化する
+static u32 my_disable_dma(struct my_priv *priv)
 {
 	enum dma_reg reg_type;
 	u32 reg;
@@ -95,18 +95,31 @@ static u32 my_dma_disable(struct my_priv *priv)
 	dma_ctrl = 1 << (DESC_INDEX + DMA_RING_BUF_EN_SHIFT) | DMA_EN;
  	reg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
 	reg &= ~dma_ctrl;
-	printk("my_dma_disable(): the value written to the dma ctrl address is %u\n", reg);
+	printk("my_disable_dma(): the value written to the dma ctrl address is %u\n", reg);
 
 	// の番地にマスクしたbitsを書き込む
 	my_writel(reg, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
 
 	// 書き込んだ値を読み込んでみる
 	dbg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
-	printk("my_dma_disable(): reading the value previously written to the dma ctrl address is %u\n", dbg);
+	printk("my_disable_dma(): reading the value previously written to the dma ctrl address is %u\n", dbg);
 	
  	return dma_ctrl;
 }
 
+// dmaを有効化する
+static void my_enable_dma(struct bcmgenet_priv *priv, u32 dma_ctrl)
+{
+	enum dma_reg reg_type;
+	u32 reg;
+
+	reg_type = DMA_CTRL;
+
+	reg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+	reg |= dma_ctrl;
+	my_writel(reg, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+
+}
 
 // 受信ハンドラを用意する
 static irqreturn_t my_isr(int irq, void *dev_id)
@@ -130,13 +143,12 @@ static int my_open(struct net_device *ndev)
 	unsigned long dma_ctrl;
 	
 	// dmaコントローラを無効化する
-	// いったんコメントアウト
-	dma_ctrl = my_dma_disable(priv);
+	dma_ctrl = my_disable_dma(priv);
 	printk("my_open(): dma control register has bit state of %lu\n", dma_ctrl);
 
-	// RXリングバッファ分のメモリを確保する
-	// とりあえずまだ必要ないのでコメントアウトしておく
-	// priv->rx_bds = priv->base + priv->hw_params->rdma_offset;
+	// dmaコントローラを有効化する
+	my_enable_dma(priv, dma_ctrl);
+
 	// リングバッファのコントロールブロックの個数、256個用意する
 	priv->num_rx_bds = TOTAL_DESC;
 	// priv->num_rx_bds個分のバッファコントロールブロック(enet_cb)の配列を確保する
