@@ -47,13 +47,15 @@
 // デバイスspecificなパラメータを投入する
 static void my_set_hw_params(struct my_priv *priv)
 {
+	struct my_hw_params *mhp;
 	// 何のために用意する必要があるのか把握できたパラメータに関して都度追加する
 	// https://github.com/raspberrypi/linux/blob/96110e96f1a82e236afb9a248258f1ef917766e9/drivers/net/ethernet/broadcom/genet/bcmgenet.c#L3758
+	mhp->rdma_offset = 0x2000;
+	mhp->words_per_bd = 3;
 	
-	// ???
-	priv->hw_params->rdma_offset = 0x2000;
-	priv->hw_params->words_per_bd = 3;
-
+	priv->hw_params = mhp;
+	
+	return;
 }
 
 
@@ -127,8 +129,9 @@ static int my_open(struct net_device *ndev)
 	unsigned long dma_ctrl;
 	
 	// dmaコントローラを無効化する
-	dma_ctrl = my_dma_disable(priv);
-	printk("my_open(): dma control register has bit state of %lu\n", dma_ctrl);
+	// いったんコメントアウト
+	// dma_ctrl = my_dma_disable(priv);
+	// printk("my_open(): dma control register has bit state of %lu\n", dma_ctrl);
 
 	// RXリングバッファ分のメモリを確保する
 	// とりあえずまだ必要ないのでコメントアウトしておく
