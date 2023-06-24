@@ -279,7 +279,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, ndev);
 	
 	// privにhwパラメータを置いておく
-	my_set_hw_params(priv);
+	// my_set_hw_params(priv);
 	
 	// opsとndevを紐づける
 	ndev->netdev_ops = &my_netdev_ops;
