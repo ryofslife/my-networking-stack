@@ -71,6 +71,13 @@ static inline u32 my_readl(void __iomem *offset)
 }
 
 // 書き込み処理関数
+static inline void my_writel(u32 value, void __iomem *offset) 
+{
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
+ 		__raw_writel(value, offset);
+ 	else
+ 		writel_relaxed(value, offset);
+}
 
 //　dma無効化処理
 static u32 my_dma_disable(struct my_priv *priv)
@@ -86,7 +93,7 @@ static u32 my_dma_disable(struct my_priv *priv)
  	dma_ctrl = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
 	reg &= ~dma_ctrl;
 	// の番地にマスクしたbitsを書き込む
-	my_readl(reg, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+	my_writel(reg, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
 	
  	return dma_ctrl;
 }
