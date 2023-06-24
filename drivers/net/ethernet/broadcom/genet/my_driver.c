@@ -76,33 +76,18 @@ static inline u32 my_readl(void __iomem *offset)
 static u32 my_dma_disable(struct my_priv *priv)
 {
 	enum dma_reg reg_type;
+	u32 reg;
 	u32 dma_ctrl;
-	// ベースアドレスの物理アドレスを置いておく用
-	static phys_addr_t pa;
 	
 	// 読み込み処理関数を呼び出す
 	// ベースアドレス + dma channel 2へのoffset + 受信リングバッファ分のoffset + 0x04(dmaコントローラ分のoffset)
 	// の番地のbits状態を読み込む
 	reg_type = DMA_CTRL;
  	dma_ctrl = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+	reg &= ~dma_ctrl;
+	// の番地にマスクしたbitsを書き込む
+	my_readl(reg, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
 	
-	// ベース番地をダンプする
-	pa = virt_to_phys(priv->base);
-	printk(KERN_INFO "my_dma_disable(): physical address of the NIC's base address: %llu\n", pa);
-	printk("my_dma_disable(): ioremapped logical address of the NIC's base address: %p\n", priv->base);
-	
-	// GENET_RDMA_REG_OFFのオフセット分まで、これが何を意味するのかはまだ把握できていない
-	printk(KERN_INFO "my_dma_disable(): physical address of the NIC's base address + GENET_RDMA_REG_OFF: %llu\n", pa + GENET_RDMA_REG_OFF);
-	printk("my_dma_disable(): ioremapped logical address of the NIC's base address + GENET_RDMA_REG_OFF: %p\n", priv->base + GENET_RDMA_REG_OFF);
-	
-	// dma channel 2の番地をダンプする
-	printk(KERN_INFO "my_dma_disable(): physical address of the NIC's unknown address: %llu\n", pa + GENET_RDMA_REG_OFF);
-	printk("my_dma_disable(): ioremapped logical address of the NIC's unknown address: %p\n", priv->base + GENET_RDMA_REG_OFF);
-	
-	// dmaコントロールレジスタ番地をダンプする
-	printk(KERN_INFO "my_dma_disable(): physical address of the NIC's dma base: %llu\n", pa + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE);
-	printk("my_dma_disable(): ioremapped logical address of the NIC's dma base: %p\n", priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE);
- 	
  	return dma_ctrl;
 }
 
