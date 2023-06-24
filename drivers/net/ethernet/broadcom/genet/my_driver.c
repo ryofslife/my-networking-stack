@@ -47,6 +47,8 @@
 // デバイスspecificなパラメータを投入する
 static struct my_hw_params *my_set_hw_params(struct my_hw_params *hw_params)
 {	
+	hw_params = kmalloc(sizeof(*hw_params), GFP_KERNEL);
+	
 	// 何のために用意する必要があるのか把握できたパラメータに関して都度追加する
 	// https://github.com/raspberrypi/linux/blob/96110e96f1a82e236afb9a248258f1ef917766e9/drivers/net/ethernet/broadcom/genet/bcmgenet.c#L3758
 	hw_params->rdma_offset = 0x2000;
