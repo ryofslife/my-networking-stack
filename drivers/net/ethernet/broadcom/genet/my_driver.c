@@ -85,15 +85,24 @@ static u32 my_dma_disable(struct my_priv *priv)
 	enum dma_reg reg_type;
 	u32 reg;
 	u32 dma_ctrl;
+	u32 dbg;
+	
+	reg_type = DMA_CTRL;
 	
 	// 読み込み処理関数を呼び出す
 	// ベースアドレス + dma channel 2へのoffset + 受信リングバッファ分のoffset + 0x04(dmaコントローラ分のoffset)
 	// の番地のbits状態を読み込む
-	reg_type = DMA_CTRL;
- 	dma_ctrl = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+	dma_ctrl = 1 << (DESC_INDEX + DMA_RING_BUF_EN_SHIFT) | DMA_EN;
+ 	reg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
 	reg &= ~dma_ctrl;
+	printk("my_dma_disable(): the value written to the dma ctrl address is %u\n", reg);
+
 	// の番地にマスクしたbitsを書き込む
 	my_writel(reg, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+
+	// 書き込んだ値を読み込んでみる
+	dbg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+	printk("my_dma_disable(): reading the value previously written to the dma ctrl address is %u\n", dbg);
 	
  	return dma_ctrl;
 }
