@@ -110,7 +110,7 @@ static u32 my_disable_dma(struct my_priv *priv)
 }
 
 // dmaを有効化する
-static void my_enable_dma(struct bcmgenet_priv *priv, u32 dma_ctrl)
+static void my_enable_dma(struct my_priv *priv, u32 dma_ctrl)
 {
 	enum dma_reg reg_type;
 	u32 reg;
