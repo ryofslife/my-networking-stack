@@ -93,6 +93,8 @@ static u32 my_disable_dma(struct my_priv *priv)
 	// ベースアドレス + dma channel 2へのoffset + 受信リングバッファ分のoffset + 0x04(dmaコントローラ分のoffset)
 	// の番地のbits状態を読み込む
 	dma_ctrl = 1 << (DESC_INDEX + DMA_RING_BUF_EN_SHIFT) | DMA_EN;
+
+
  	reg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
 	reg &= ~dma_ctrl;
 	printk("my_disable_dma(): the value written to the dma ctrl address is %u\n", reg);
@@ -115,9 +117,18 @@ static void my_enable_dma(struct bcmgenet_priv *priv, u32 dma_ctrl)
 
 	reg_type = DMA_CTRL;
 
+	printk("my_enable_dma(): the value of the mask is %u\n", dma_ctrl);
+
 	reg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+	printk("my_enable_dma(): the value read from the dma ctrl address is %u\n", reg);
+
 	reg |= dma_ctrl;
+	printk("my_enable_dma(): the value written to the dma ctrl address is %u\n", reg);
+
 	my_writel(reg, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+
+	reg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+	printk("my_enable_dma(): the value read from the dma ctrl address after written is %u\n", reg);
 
 }
 
