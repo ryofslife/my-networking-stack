@@ -79,6 +79,28 @@ static inline void my_writel(u32 value, void __iomem *offset)
  		writel_relaxed(value, offset);
 }
 
+// 受信バッファを初期化する
+static void my_umac_reset(struct my_priv *priv)
+{
+	u32 reg;
+
+	// 受信バッファコントロールレジスタの状態を取得する、関数はヘッダファイルに定義した
+	reg = my_sys_readl(priv, SYS_RBUF_FLUSH_CTRL);
+
+	// 取得したbitsへのマスクを用意する
+	// 1bit目を1にセットする
+	reg |= BIT(1);
+
+	// 受信バッファコントロールレジスタに書き込む、こちらもヘッダファイルに定義してある
+	my_sys_writel(priv, reg, SYS_RBUF_FLUSH_CTRL);
+	udelay(10);
+
+	// 1bit目以外を1にしてandする
+	reg &= ~BIT(1);
+	my_sys_writel(priv, reg, SYS_RBUF_FLUSH_CTRL);
+	udelay(10);
+}
+
 //　dmaを無効化する
 static u32 my_disable_dma(struct my_priv *priv)
 {
@@ -152,6 +174,9 @@ static int my_open(struct net_device *ndev)
 	struct my_priv *priv = netdev_priv(ndev);
 	int ret;
 	unsigned long dma_ctrl;
+
+	// macを有効化する
+	my_umac_reset(priv);
 	
 	// dmaコントローラを無効化する
 	dma_ctrl = my_disable_dma(priv);
