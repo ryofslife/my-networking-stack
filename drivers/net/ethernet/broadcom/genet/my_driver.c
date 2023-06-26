@@ -79,7 +79,7 @@ static inline void my_writel(u32 value, void __iomem *offset)
  		writel_relaxed(value, offset);
 }
 
-// 受信バッファを初期化する
+// macの受信バッファを初期化する?
 static void my_umac_reset(struct my_priv *priv)
 {
 	u32 reg;
@@ -100,6 +100,33 @@ static void my_umac_reset(struct my_priv *priv)
 	my_sys_writel(priv, reg, SYS_RBUF_FLUSH_CTRL);
 	udelay(10);
 }
+static void reset_umac(struct bcmgenet_priv *priv)
+{
+	// my_umac_resetでやっていることと何が違うのか、この辺りはデータシートで確認しないとわからないかも
+	// たぶん受信バッファを解放している
+	my_sys_writel(priv, 0, SYS_RBUF_FLUSH_CTRL);
+	// introduce 10 micro seconds of delay
+	udelay(10);
+
+	// ドライバのコメントではsoftなリセットをしていると書いてある、それだけじゃいまいちわからない
+	my_umac_writel(priv, CMD_SW_RESET, UMAC_CMD);
+	// introduce 2 micro seconds of delay
+	udelay(2);
+}
+
+// macを初期化する
+static void init_umac(struct my_priv *priv)
+{
+	// probeでprivにplatform_deviceは置いているのでOKなはず
+	struct device *kdev = &priv->pdev->dev;
+	// レジスタの状態を取得してマスクしていく
+	u32 reg;
+	// これはいまいちピンと来ていない、後でちゃんと把握する必要あり
+	u32 int0_enable = 0;
+
+	reset_umac(priv);
+
+}
 
 //　dmaを無効化する
 static u32 my_disable_dma(struct my_priv *priv)
@@ -115,7 +142,6 @@ static u32 my_disable_dma(struct my_priv *priv)
 	// ベースアドレス + dma channel 2へのoffset + 受信リングバッファ分のoffset + 0x04(dmaコントローラ分のoffset)
 	// の番地のbits状態を読み込む
 	dma_ctrl = 1 << (DESC_INDEX + DMA_RING_BUF_EN_SHIFT) | DMA_EN;
-
 
  	reg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
 	reg &= ~dma_ctrl;
@@ -175,8 +201,11 @@ static int my_open(struct net_device *ndev)
 	int ret;
 	unsigned long dma_ctrl;
 
-	// macを有効化する
+	// macをリセットする
 	my_umac_reset(priv);
+
+	// macの初期化から有効化？まで行う
+	init_umac(priv);
 	
 	// dmaコントローラを無効化する
 	dma_ctrl = my_disable_dma(priv);

@@ -75,7 +75,7 @@ static inline u32 my_umac_readl(struct my_priv *priv, u32 off)
 }
 
 // 自分用に再定義する、受信バッファコントロールレジスタの状態を取得する
-// GENET_SYS_OFFについてはヘッダファイルで定義されている
+// SYSレジスタブロックからの読み取りを行う
 static inline u32 my_sys_readl(struct my_priv *priv, u32 off)
 {	
 	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) 
@@ -83,11 +83,27 @@ static inline u32 my_sys_readl(struct my_priv *priv, u32 off)
 	else								
 		return readl_relaxed(priv->base + GENET_SYS_OFF + off);	
 }
-// 受信バッファコントロールレジスタに書き込む
-static inline u32 my_sys_readl(struct my_priv *priv, u32 val, u32 off)
+// SYSレジスタブロックへの書き込みを行う
+static inline u32 my_sys_writel(struct my_priv *priv, u32 val, u32 off)
 {									
 	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
 		__raw_writel(val, priv->base + GENET_SYS_OFF + off);	
 	else								
 		writel_relaxed(val, priv->base + GENET_SYS_OFF + off);		
+}
+// UMACレジスタブロックからの読み取りを行う
+static inline u32 my_umac_readl(struct my_priv *priv, u32 off)
+{	
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) 
+		return __raw_readl(priv->base + GENET_UMAC_OFF + off);		
+	else								
+		return readl_relaxed(priv->base + GENET_UMAC_OFF + off);	
+}
+// UMACレジスタブロックへの書き込みを行う
+static inline u32 my_umac_writel(struct my_priv *priv, u32 val, u32 off)
+{									
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
+		__raw_writel(val, priv->base + GENET_UMAC_OFF + off);	
+	else								
+		writel_relaxed(val, priv->base + GENET_UMAC_OFF + off);		
 }
