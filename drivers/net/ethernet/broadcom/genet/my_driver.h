@@ -107,3 +107,19 @@ static inline u32 my_umac_writel(struct my_priv *priv, u32 val, u32 off)
 	else								
 		writel_relaxed(val, priv->base + GENET_UMAC_OFF + off);		
 }
+// rbufレジスタブロックからの読み取りを行う
+static inline u32 my_rbuf_readl(struct my_priv *priv, u32 off)
+{	
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) 
+		return __raw_readl(priv->base + GENET_RBUF_OFF + off);		
+	else								
+		return readl_relaxed(priv->base + GENET_RBUF_OFF + off);	
+}
+// rbufレジスタブロックへの書き込みを行う
+static inline u32 my_rbuf_writel(struct my_priv *priv, u32 val, u32 off)
+{									
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
+		__raw_writel(val, priv->base + GENET_RBUF_OFF + off);	
+	else								
+		writel_relaxed(val, priv->base + GENET_RBUF_OFF + off);		
+}

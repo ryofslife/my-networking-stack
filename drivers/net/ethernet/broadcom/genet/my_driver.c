@@ -126,6 +126,19 @@ static void init_umac(struct my_priv *priv)
 
 	reset_umac(priv);
 
+	// 受信カウンタをリセットする
+	my_umac_writel(priv, MIB_RESET_RX | MIB_RESET_RUNT, UMAC_MIB_CTRL);
+	// 受信カウンタを初期化する
+	my_umac_writel(priv, 0, UMAC_MIB_CTRL);
+
+	// MTUサイズを設定する
+	my_umac_writel(priv, ENET_MAX_MTU_SIZE, UMAC_MAX_FRAME_LEN); 
+
+	// receive status blockを有効化する
+	reg = my_rbuf_readl(priv, RBUF_CTRL);
+	reg |= RBUF_64B_EN;
+	my_rbuf_writel(priv, reg, RBUF_CTRL);
+
 }
 
 //　dmaを無効化する
