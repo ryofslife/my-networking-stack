@@ -121,7 +121,7 @@ static void init_umac(struct my_priv *priv)
 	struct device *kdev = &priv->pdev->dev;
 	// レジスタの状態を取得してマスクしていく
 	u32 reg;
-	// これはいまいちピンと来ていない、後でちゃんと把握する必要あり
+	// phyのレジスタに対するマスク、たぶん
 	u32 int0_enable = 0;
 
 	reset_umac(priv);
@@ -138,6 +138,10 @@ static void init_umac(struct my_priv *priv)
 	reg = my_rbuf_readl(priv, RBUF_CTRL);
 	reg |= RBUF_64B_EN;
 	my_rbuf_writel(priv, reg, RBUF_CTRL);
+
+	// MDIOを有効化して、phyがmacに対して割り込みを行えるようにする
+	int0_enable |= (UMAC_IRQ_MDIO_DONE | UMAC_IRQ_MDIO_ERROR);
+	my_intrl2_0_writel(priv, int0_enable, INTRL2_CPU_MASK_CLEAR);
 
 }
 
@@ -166,6 +170,13 @@ static u32 my_disable_dma(struct my_priv *priv)
 	// 書き込んだ値を読み込んでみる
 	dbg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
 	printk("my_disable_dma(): reading the value previously written to the dma ctrl address is %u\n", dbg);
+
+	// 受信バッファの解放を行う
+	reg = my_sys_readl(priv, SYS_RBUF_FLUSH_CTRL);
+	my_sys_writel(priv, reg | BIT(0), SYS_RBUF_FLUSH_CTRL);
+	udelay(10);
+	my_sys_writel(priv, reg, SYS_RBUF_FLUSH_CTRL);
+	udelay(10);
 	
  	return dma_ctrl;
 }
