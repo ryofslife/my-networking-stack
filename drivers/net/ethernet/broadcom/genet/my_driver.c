@@ -181,6 +181,38 @@ static u32 my_disable_dma(struct my_priv *priv)
  	return dma_ctrl;
 }
 
+// dmaを初期化する
+static int my_init_dma(struct bcmgenet_priv *priv)
+{
+
+	enum dma_reg reg_type;
+
+	// コントロールブロック単体の構造体
+	struct enet_cb *cb;
+
+	// リングバッファのコントロールブロックの個数、256個用意する
+	priv->num_rx_bds = TOTAL_DESC;
+	// num_rx_bds個分のバッファコントロールブロック(enet_cb)の配列を確保する
+	priv->rx_cbs = kcalloc(priv->num_rx_bds, sizeof(struct enet_cb), GFP_KERNEL);
+	if (!priv->rx_cbs) 
+	{
+		printk("my_open(): failed to allocate memory for RX ring buffer\n");
+		return -ENOMEM;
+	}
+
+	// それぞれのコントロールブロックの番地を指定する
+	for (i = 0; i < priv->num_rx_bds; i++) {
+		cb = priv->rx_cbs + i;
+		cb->bd_addr = priv->rx_bds + i * DMA_DESC_SIZE;
+	}
+
+	// 受信dmaレジスタブロックのDMA_SCB_BURST_SIZEレジスタに書き込む
+	reg_type = DMA_SCB_BURST_SIZE;
+	my_writel(priv->dma_max_burst_length, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+
+	return 0;
+}
+
 // dmaを有効化する
 static void my_enable_dma(struct my_priv *priv, u32 dma_ctrl)
 {
@@ -235,18 +267,15 @@ static int my_open(struct net_device *ndev)
 	dma_ctrl = my_disable_dma(priv);
 	printk("my_open(): dma control register has bit state of %lu\n", dma_ctrl);
 
+	// dmaコントローラを初期化する
+	ret = my_init_dma(priv);
+	if (ret) {
+		printk("my_open(): failed to initialize DMA\n");
+		return -1;
+	}
+
 	// dmaコントローラを有効化する
 	my_enable_dma(priv, dma_ctrl);
-
-	// リングバッファのコントロールブロックの個数、256個用意する
-	priv->num_rx_bds = TOTAL_DESC;
-	// priv->num_rx_bds個分のバッファコントロールブロック(enet_cb)の配列を確保する
-	priv->rx_cbs = kcalloc(priv->num_rx_bds, sizeof(struct enet_cb), GFP_KERNEL);
-	if (!priv->rx_cbs) 
-	{
-		printk("my_open(): failed to allocate memory for RX ring buffer\n");
-		return -ENOMEM;
-	}
 	
 	// irqの登録を行う
  	ret = request_irq(priv->irq, my_isr, IRQF_SHARED, ndev->name, priv);
