@@ -139,3 +139,22 @@ static inline u32 my_intrl2_0_writel(struct my_priv *priv, u32 val, u32 off)
 	else								
 		writel_relaxed(val, priv->base + GENET_INTRL2_0_OFF + off);		
 }
+
+
+
+// rdmaレジスタブロックからの読み取りを行う
+static inline u32 my_rdma_readl(struct my_priv *priv, enum dma_reg reg_type)
+{	
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) 
+		return __raw_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);		
+	else								
+		return readl_relaxed(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);	
+}
+// rdmaレジスタブロックへの書き込みを行う
+static inline u32 my_rdma_writel(struct my_priv *priv, u32 val, enum dma_reg reg_type)
+{									
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
+		__raw_writel(val, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);	
+	else								
+		writel_relaxed(val, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);		
+}

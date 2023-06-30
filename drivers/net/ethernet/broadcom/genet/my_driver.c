@@ -145,6 +145,57 @@ static void init_umac(struct my_priv *priv)
 
 }
 
+// 受信queueを初期化する
+static int my_init_rx_queues(struct net_device *dev)
+{
+	struct bcmgenet_priv *priv = netdev_priv(dev);
+	enum dma_reg reg_type;
+	u32 i;
+	u32 dma_enable_reg;
+	u32 dma_ctrl_reg;
+	u32 ring_cfg_reg;
+	int ret;
+
+	// rdmaコントロールレジスタのbitsを取得する
+	reg_type = DMA_CTRL;
+	dma_ctrl = my_rdma_readl(priv, DMA_CTRL);
+	dma_enable_reg = dma_ctrl_reg & DMA_EN;
+
+	// rdmaコントロールレジスタのenable bitsをセットする
+	my_rdma_writel(priv, dma_ctrl, DMA_CTRL);
+
+	dma_ctrl = 0;
+	ring_cfg = 0;
+
+		/* Initialize Rx priority queues */
+	// 1から15までのqueueを初期化する
+	// ここ、bcmgenet_init_rx_ring、結構な処理を行っているので後に回す
+	for (i = 0; i < priv->hw_params->rx_queues; i++) {
+		ret = bcmgenet_init_rx_ring(priv, i, priv->hw_params->rx_bds_per_q, i * priv->hw_params->rx_bds_per_q, (i + 1) * priv->hw_params->rx_bds_per_q);
+
+		if (ret)
+			return ret;
+
+		ring_cfg |= (1 << i);
+		dma_ctrl |= (1 << (i + DMA_RING_BUF_EN_SHIFT));
+	}
+
+	// ここでこのマスクはどういう状態なのか？
+	ring_cfg |= (1 << DESC_INDEX);
+	dma_ctrl |= (1 << (DESC_INDEX + DMA_RING_BUF_EN_SHIFT));
+
+	/* Enable rings */
+	// control and statusレジスタに書き込む、受信リングバッファを有効化
+	my_rdma_writel(priv, ring_cfg, DMA_RING_CFG);
+
+	// re有効化している
+	if (dma_enable)
+		dma_ctrl |= DMA_EN;
+	my_rdma_writel(priv, dma_ctrl, DMA_CTRL);
+
+	return 0;
+}
+
 //　dmaを無効化する
 static u32 my_disable_dma(struct my_priv *priv)
 {
@@ -190,6 +241,7 @@ static int my_init_dma(struct bcmgenet_priv *priv)
 	// コントロールブロック単体の構造体
 	struct enet_cb *cb;
 
+	/* Initialize common Rx ring structures */
 	// リングバッファのコントロールブロックの個数、256個用意する
 	priv->num_rx_bds = TOTAL_DESC;
 	// num_rx_bds個分のバッファコントロールブロック(enet_cb)の配列を確保する
@@ -206,9 +258,14 @@ static int my_init_dma(struct bcmgenet_priv *priv)
 		cb->bd_addr = priv->rx_bds + i * DMA_DESC_SIZE;
 	}
 
+	/* Init rDma */
 	// 受信dmaレジスタブロックのDMA_SCB_BURST_SIZEレジスタに書き込む
 	reg_type = DMA_SCB_BURST_SIZE;
 	my_writel(priv->dma_max_burst_length, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+
+	/* Initialize Rx queues */
+ 	// etherコントローラのdma・割り込みの有効化を行う
+ 	ret = my_init_rx_queues(priv->dev);
 
 	return 0;
 }
