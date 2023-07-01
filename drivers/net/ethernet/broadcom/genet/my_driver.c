@@ -79,6 +79,24 @@ static inline void my_writel(u32 value, void __iomem *offset)
  		writel_relaxed(value, offset);
 }
 
+// 受信リングの有効化と無効化を行う
+static inline void my_rx_ring16_int_enable(struct my_rx_ring *ring)
+{
+	my_intrl2_0_writel(ring->priv, UMAC_IRQ_RXDMA_DONE, INTRL2_CPU_MASK_CLEAR);
+}
+static inline void my_rx_ring16_int_disable(struct my_rx_ring *ring)
+{
+	my_intrl2_0_writel(ring->priv, UMAC_IRQ_RXDMA_DONE, INTRL2_CPU_MASK_SET);
+}
+static inline void my_rx_ring_int_enable(struct my_rx_ring *ring)
+{
+	my_intrl2_1_writel(ring->priv, 1 << (UMAC_IRQ1_RX_INTR_SHIFT + ring->index), INTRL2_CPU_MASK_CLEAR);
+}
+static inline void my_rx_ring_int_disable(struct my_rx_ring *ring)
+{
+	my_intrl2_1_writel(ring->priv, 1 << (UMAC_IRQ1_RX_INTR_SHIFT + ring->index), INTRL2_CPU_MASK_SET);
+}
+
 // macの受信バッファを初期化する?
 static void my_umac_reset(struct my_priv *priv)
 {
@@ -145,6 +163,48 @@ static void init_umac(struct my_priv *priv)
 
 }
 
+// 受信dma用リングの初期化
+static int my_init_rx_ring(struct my_priv *priv, unsigned int index, unsigned int size, unsigned int start_ptr, unsigned int end_ptr)
+{
+    // リングの構造体の配列がヘッダファイルで宣言されている
+    // リングそれぞれを初期化していく
+	struct my_rx_ring *ring = &priv->rx_rings[index];
+	u32 words_per_bd = WORDS_PER_BD(priv);
+	int ret;
+
+    // privのリングにさらにprivを持たせている
+	ring->priv = priv;
+
+    // 何番目のリングなのかを指定する
+	ring->index = index;
+
+    // リングごとに割り込みの有効化を行うハンドラ関数を指定している、これが割り込みを発生させている、たぶん
+    // このハンドラ関数が呼ばれるタイミングを押さえておく必要がある
+	if (index == DESC_INDEX) {
+		ring->int_enable = my_rx_ring16_int_enable;
+		ring->int_disable = my_rx_ring16_int_disable;
+	} else {
+		ring->int_enable = my_rx_ring_int_enable;
+		ring->int_disable = my_rx_ring_int_disable;
+	}
+
+	// 対象リングの番地、priv->rx_cbsはリング共通
+	ring->cbs = priv->rx_cbs + start_ptr;
+	// 対象リングにおけるバッファディスクリプタ(bd)の数
+	ring->size = size;
+	// これはよくわからん
+	ring->c_index = 0;
+	// start_ptrは　i番目(ring) × 一つのringが持つdbの数　として定義している
+	// 0番目のringからの距離
+	ring->read_ptr = start_ptr;
+	ring->cb_ptr = start_ptr;
+	// end_ptrは　(i + 1)番目 × 一つのringが持つdbの数　として定義している
+	// 対象リングのお尻の番地
+	ring->end_ptr = end_ptr - 1;
+
+	return ret;
+}
+
 // 受信queueを初期化する
 static int my_init_rx_queues(struct net_device *dev)
 {
@@ -171,7 +231,7 @@ static int my_init_rx_queues(struct net_device *dev)
 	// 1から15までのqueueを初期化する
 	// ここ、bcmgenet_init_rx_ring、結構な処理を行っているので後に回す
 	for (i = 0; i < priv->hw_params->rx_queues; i++) {
-		ret = bcmgenet_init_rx_ring(priv, i, priv->hw_params->rx_bds_per_q, i * priv->hw_params->rx_bds_per_q, (i + 1) * priv->hw_params->rx_bds_per_q);
+		ret = my_init_rx_ring(priv, i, priv->hw_params->rx_bds_per_q, i * priv->hw_params->rx_bds_per_q, (i + 1) * priv->hw_params->rx_bds_per_q);
 
 		if (ret)
 			return ret;
@@ -266,6 +326,15 @@ static int my_init_dma(struct bcmgenet_priv *priv)
 	/* Initialize Rx queues */
  	// etherコントローラのdma・割り込みの有効化を行う
  	ret = my_init_rx_queues(priv->dev);
+
+	// 有効化に失敗した場合に確保したリングバッファ分のメモリを解放する
+		if (ret) {
+		netdev_err(priv->dev, "failed to initialize Rx queues\n");
+		bcmgenet_free_rx_buffers(priv);
+		kfree(priv->rx_cbs);
+		kfree(priv->tx_cbs);
+		return ret;
+	}
 
 	return 0;
 }

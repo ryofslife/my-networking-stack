@@ -33,6 +33,27 @@ static const u8 my_dma_regs[] = {
 	[DMA_CTRL]		= 0x04,
 };
 
+// リングの構造体
+struct my_rx_ring {
+ 	unsigned long	bytes;
+ 	unsigned long	packets;
+ 	unsigned long	errors;
+ 	unsigned long	dropped;
+ 	unsigned int	index;		/* Rx ring index */
+ 	struct enet_cb	*cbs;		/* Rx ring buffer control block */
+ 	unsigned int	size;		/* Rx ring size */
+ 	unsigned int	c_index;	/* Rx last consumer index */
+ 	unsigned int	read_ptr;	/* Rx ring read pointer */
+ 	unsigned int	cb_ptr;		/* Rx ring initial CB ptr */
+ 	unsigned int	end_ptr;	/* Rx ring end CB ptr */
+ 	unsigned int	old_discards;
+ 	u32		rx_max_coalesced_frames;
+ 	u32		rx_coalesce_usecs;
+ 	void (*int_enable)(struct my_rx_ring *);
+ 	void (*int_disable)(struct my_rx_ring *);
+ 	struct my_priv *priv;
+};
+
 // 自分が定義するデバイス固有の情報を置いておく
 struct my_priv {
 	
@@ -57,6 +78,8 @@ struct my_priv {
 	struct enet_cb *rx_cbs;
 	// デバイスspecificなパラメータ
 	struct my_hw_params *hw_params;
+	// リングの構造体を配列としてDESC_INDEX=16個分確保する、ハードにqueueが16ある、たぶん
+	struct my_rx_ring rx_rings[DESC_INDEX + 1];
 	
 	// その他
 	bool internal_phy;
@@ -139,9 +162,22 @@ static inline u32 my_intrl2_0_writel(struct my_priv *priv, u32 val, u32 off)
 	else								
 		writel_relaxed(val, priv->base + GENET_INTRL2_0_OFF + off);		
 }
-
-
-
+// intrl2_1レジスタブロックからの読み取りを行う
+static inline u32 my_intrl2_1_readl(struct my_priv *priv, u32 off)
+{	
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) 
+		return __raw_readl(priv->base + GENET_INTRL2_1_OFF + off);		
+	else								
+		return readl_relaxed(priv->base + GENET_INTRL2_1_OFF + off);	
+}
+// intrl2_1レジスタブロックへの書き込みを行う
+static inline u32 my_intrl2_1_writel(struct my_priv *priv, u32 val, u32 off)
+{									
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
+		__raw_writel(val, priv->base + GENET_INTRL2_1_OFF + off);	
+	else								
+		writel_relaxed(val, priv->base + GENET_INTRL2_1_OFF + off);		
+}
 // rdmaレジスタブロックからの読み取りを行う
 static inline u32 my_rdma_readl(struct my_priv *priv, enum dma_reg reg_type)
 {	
