@@ -97,6 +97,61 @@ static inline void my_rx_ring_int_disable(struct my_rx_ring *ring)
 	my_intrl2_1_writel(ring->priv, 1 << (UMAC_IRQ1_RX_INTR_SHIFT + ring->index), INTRL2_CPU_MASK_SET);
 }
 
+// 渡されたリングに存在するコントロールブロックそれぞれにskbを確保する
+static int my_alloc_rx_buffers(struct my_priv *priv, struct my_rx_ring *ring)
+{
+	struct enet_cb *cb;
+	struct sk_buff *skb;
+	int i;
+
+	for (i = 0; i < ring->size; i++) {
+		cb = ring->cbs + i;
+		skb = bcmgenet_rx_refill(priv, cb);
+		if (skb)
+			dev_consume_skb_any(skb);
+		if (!cb->skb)
+			return -ENOMEM;
+	}
+
+	return 0;
+}
+
+// 渡されたコントロールブロック用にskbを確保して割り当てる
+static struct sk_buff *my_rx_refill(struct my_priv *priv, struct enet_cb *cb)
+{
+	struct device *kdev = &priv->pdev->dev;
+	struct sk_buff *skb;
+	struct sk_buff *rx_skb;
+	dma_addr_t mapping;
+
+	// skbを確保する
+	skb = __netdev_alloc_skb(priv->dev, priv->rx_buf_len + SKB_ALIGNMENT, GFP_ATOMIC | __GFP_NOWARN);
+	if (!skb) {
+		printk(KERN_INFO "my_rx_refill(): could not allocated skb for the control block\n");
+		return NULL;
+	}
+
+	// 確保したskbのアドレスは論理アドレスである、そのままではdmaコントローラは扱えないのでdmableなアドレスに変換する
+	mapping = dma_map_single(kdev, skb->data, priv->rx_buf_len, DMA_FROM_DEVICE);
+	if (dma_mapping_error(kdev, mapping)) {
+		dev_kfree_skb_any(skb);
+		printk(KERN_INFO "my_rx_refill(): could not map the skb to dma address space\n");
+		return NULL;
+	}
+
+	// 現在cbに割り当てられているskbをunmapする、新たに確保したskbを割り当てるため
+	rx_skb = bcmgenet_free_rx_cb(kdev, cb);
+
+	// 新たに確保したskbをcbに割り当てる
+	cb->skb = skb;
+	dma_unmap_addr_set(cb, dma_addr, mapping);
+	dma_unmap_len_set(cb, dma_len, priv->rx_buf_len);
+	dmadesc_set_addr(priv, cb->bd_addr, mapping);
+
+	/* Return the current Rx skb to caller */
+	return rx_skb;
+}
+
 // coalescing engineのセットアップ
 static void my_set_rx_coalesce(struct my_rx_ring *ring, u32 usecs, u32 pkts)
 {
@@ -222,8 +277,8 @@ static int my_init_rx_ring(struct my_priv *priv, unsigned int index, unsigned in
 	ring->rx_coalesce_usecs = 50;
 	ring->rx_max_coalesced_frames = 1;
 
-	//
-	ret = bcmgenet_alloc_rx_buffers(priv, ring);
+	// リングのコントロールブロックにそれぞれskbを確保する
+	ret = my_alloc_rx_buffers(priv, ring);
 	if (ret)
 		return ret;
 
@@ -452,8 +507,8 @@ static int my_open(struct net_device *ndev)
 	
 	printk("my_open(): successfully registered my receive handler\n");
 	
-	// これは受信するだけなら呼ぶ必要はないはず？
-	// netif_start_queue(dev);
+	// 
+	netif_start_queue(dev);
 	
 	return 0;
 		
@@ -594,6 +649,9 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	
 	// mii起動するまでのqueueを初期化
 	init_waitqueue_head(&priv->wq);
+
+	// 各リングのコントロールブロック一つ分のサイズ
+	priv->rx_buf_len = RX_BUF_LENGTH;
 	
 	// NICの初期化を行う
 	oops = bcmgenet_mii_init(ndev);
