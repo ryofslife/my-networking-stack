@@ -97,6 +97,21 @@ static inline void my_rx_ring_int_disable(struct my_rx_ring *ring)
 	my_intrl2_1_writel(ring->priv, 1 << (UMAC_IRQ1_RX_INTR_SHIFT + ring->index), INTRL2_CPU_MASK_SET);
 }
 
+// coalescing engineのセットアップ
+static void my_set_rx_coalesce(struct my_rx_ring *ring, u32 usecs, u32 pkts)
+{
+	struct bcmgenet_priv *priv = ring->priv;
+	unsigned int i = ring->index;
+	u32 reg;
+
+	my_rdma_ring_writel(priv, i, pkts, DMA_MBUF_DONE_THRESH);
+
+	reg = bcmgenet_rdma_readl(priv, DMA_RING0_TIMEOUT + i);
+	reg &= ~DMA_TIMEOUT_MASK;
+	reg |= DIV_ROUND_UP(usecs * 1000, 8192);
+	my_rdma_writel(priv, reg, DMA_RING0_TIMEOUT + i);
+}
+
 // macの受信バッファを初期化する?
 static void my_umac_reset(struct my_priv *priv)
 {
@@ -171,6 +186,7 @@ static int my_init_rx_ring(struct my_priv *priv, unsigned int index, unsigned in
 	struct my_rx_ring *ring = &priv->rx_rings[index];
 	u32 words_per_bd = WORDS_PER_BD(priv);
 	int ret;
+	u32 usecs, pkts;
 
     // privのリングにさらにprivを持たせている
 	ring->priv = priv;
@@ -201,6 +217,29 @@ static int my_init_rx_ring(struct my_priv *priv, unsigned int index, unsigned in
 	// end_ptrは　(i + 1)番目 × 一つのringが持つdbの数　として定義している
 	// 対象リングのお尻の番地
 	ring->end_ptr = end_ptr - 1;
+	// coalescing engine周りのパラメータを定義する、ここをいじってみるのは面白いかも
+	// bcmだとopen内で定義している
+	ring->rx_coalesce_usecs = 50;
+	ring->rx_max_coalesced_frames = 1;
+
+	//
+	ret = bcmgenet_alloc_rx_buffers(priv, ring);
+	if (ret)
+		return ret;
+
+	// 設定したパラメータに基づいてcoalescing engineをチューニング
+	my_set_rx_coalesce(ring, ring->rx_coalesce_usecs, ring->rx_max_coalesced_frames);
+
+	my_rdma_ring_writel(priv, index, 0, RDMA_PROD_INDEX);
+	my_rdma_ring_writel(priv, index, 0, RDMA_CONS_INDEX);
+	my_rdma_ring_writel(priv, index, ((size << DMA_RING_SIZE_SHIFT) | RX_BUF_LENGTH), DMA_RING_BUF_SIZE);
+	my_rdma_ring_writel(priv, index, (DMA_FC_THRESH_LO << DMA_XOFF_THRESHOLD_SHIFT) | DMA_FC_THRESH_HI, RDMA_XON_XOFF_THRESH);
+	//　start_ptr(end_ptr) * words_per_bd　をrdma_ringレジスタブロックの対象レジスタに書き込んでいる
+	/* Set start and end address, read and write pointers */
+	my_rdma_ring_writel(priv, index, start_ptr * words_per_bd, DMA_START_ADDR);
+	my_rdma_ring_writel(priv, index, start_ptr * words_per_bd, RDMA_READ_PTR);
+	my_rdma_ring_writel(priv, index, start_ptr * words_per_bd, RDMA_WRITE_PTR);
+	my_rdma_ring_writel(priv, index, end_ptr * words_per_bd - 1, DMA_END_ADDR);
 
 	return ret;
 }
