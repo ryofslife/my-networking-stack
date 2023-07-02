@@ -81,6 +81,7 @@ struct my_priv {
 	// リングの構造体を配列としてDESC_INDEX=16個分確保する、ハードにqueueが16ある、たぶん
 	struct my_rx_ring rx_rings[DESC_INDEX + 1];
 	// 受信バッファのサイズ
+	
 	unsigned int rx_buf_len;
 	
 	// その他
