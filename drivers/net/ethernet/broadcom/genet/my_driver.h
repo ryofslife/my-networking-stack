@@ -12,6 +12,8 @@
 
 #include "bcmgenet.h"
 
+#define GENET_RDMA_REG_OFF	(priv->hw_params->rdma_offset + TOTAL_DESC * DMA_DESC_SIZE)
+
 // デバイスspecificなパラメータ
 struct my_hw_params {
 	// baseから始まるリングバッファブロック一つ分のデータ部の大きさ
@@ -92,13 +94,13 @@ struct my_priv {
 };
 									
 // 自分用に再定義する、umac周りのレジスタの状態を取得する
-static inline u32 my_umac_readl(struct my_priv *priv, u32 off)
-{	
-	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) 
-		return __raw_readl(priv->base + GENET_UMAC_OFF + off);		
-	else								
-		return readl_relaxed(priv->base + GENET_UMAC_OFF + off);	
-}
+// static inline u32 my_umac_readl(struct my_priv *priv, u32 off)
+// {	
+// 	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) 
+// 		return __raw_readl(priv->base + GENET_UMAC_OFF + off);		
+// 	else								
+// 		return readl_relaxed(priv->base + GENET_UMAC_OFF + off);	
+// }
 
 // 自分用に再定義する、受信バッファコントロールレジスタの状態を取得する
 // SYSレジスタブロックからの読み取りを行う
@@ -110,7 +112,7 @@ static inline u32 my_sys_readl(struct my_priv *priv, u32 off)
 		return readl_relaxed(priv->base + GENET_SYS_OFF + off);	
 }
 // SYSレジスタブロックへの書き込みを行う
-static inline u32 my_sys_writel(struct my_priv *priv, u32 val, u32 off)
+static inline void my_sys_writel(struct my_priv *priv, u32 val, u32 off)
 {									
 	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
 		__raw_writel(val, priv->base + GENET_SYS_OFF + off);	
@@ -127,7 +129,7 @@ static inline u32 my_umac_readl(struct my_priv *priv, u32 off)
 		return readl_relaxed(priv->base + GENET_UMAC_OFF + off);	
 }
 // UMACレジスタブロックへの書き込みを行う
-static inline u32 my_umac_writel(struct my_priv *priv, u32 val, u32 off)
+static inline void my_umac_writel(struct my_priv *priv, u32 val, u32 off)
 {									
 	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
 		__raw_writel(val, priv->base + GENET_UMAC_OFF + off);	
@@ -144,7 +146,7 @@ static inline u32 my_rbuf_readl(struct my_priv *priv, u32 off)
 		return readl_relaxed(priv->base + GENET_RBUF_OFF + off);	
 }
 // rbufレジスタブロックへの書き込みを行う
-static inline u32 my_rbuf_writel(struct my_priv *priv, u32 val, u32 off)
+static inline void my_rbuf_writel(struct my_priv *priv, u32 val, u32 off)
 {									
 	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
 		__raw_writel(val, priv->base + GENET_RBUF_OFF + off);	
@@ -161,7 +163,7 @@ static inline u32 my_intrl2_0_readl(struct my_priv *priv, u32 off)
 		return readl_relaxed(priv->base + GENET_INTRL2_0_OFF + off);	
 }
 // intrl2_0レジスタブロックへの書き込みを行う
-static inline u32 my_intrl2_0_writel(struct my_priv *priv, u32 val, u32 off)
+static inline void my_intrl2_0_writel(struct my_priv *priv, u32 val, u32 off)
 {									
 	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
 		__raw_writel(val, priv->base + GENET_INTRL2_0_OFF + off);	
@@ -177,7 +179,7 @@ static inline u32 my_intrl2_1_readl(struct my_priv *priv, u32 off)
 		return readl_relaxed(priv->base + GENET_INTRL2_1_OFF + off);	
 }
 // intrl2_1レジスタブロックへの書き込みを行う
-static inline u32 my_intrl2_1_writel(struct my_priv *priv, u32 val, u32 off)
+static inline void my_intrl2_1_writel(struct my_priv *priv, u32 val, u32 off)
 {									
 	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
 		__raw_writel(val, priv->base + GENET_INTRL2_1_OFF + off);	
@@ -194,7 +196,7 @@ static inline u32 my_rdma_readl(struct my_priv *priv, enum dma_reg reg_type)
 		return readl_relaxed(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);	
 }
 // rdmaレジスタブロックへの書き込みを行う
-static inline u32 my_rdma_writel(struct my_priv *priv, u32 val, enum dma_reg reg_type)
+static inline void my_rdma_writel(struct my_priv *priv, u32 val, enum dma_reg reg_type)
 {									
 	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
 		__raw_writel(val, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);	
@@ -211,7 +213,7 @@ static inline u32 my_rdma_ring_readl(struct my_priv *priv, unsigned int ring, en
 		return readl_relaxed(priv->base + GENET_RDMA_REG_OFF + (DMA_RING_SIZE * ring) + genet_dma_ring_regs[r]);	
 }
 // rx ringレジスタブロックへの書き込みを行う
-static inline u32 my_rdma_ring_writel(struct my_priv *priv, unsigned int ring, u32 val, enum dma_reg reg_type)
+static inline void my_rdma_ring_writel(struct my_priv *priv, unsigned int ring, u32 val, enum dma_reg reg_type)
 {									
 	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
 		__raw_writel(val, priv->base + GENET_RDMA_REG_OFF + (DMA_RING_SIZE * ring) + genet_dma_ring_regs[r]);	
