@@ -402,7 +402,7 @@ static int my_init_dma(struct bcmgenet_priv *priv)
 	priv->rx_cbs = kcalloc(priv->num_rx_bds, sizeof(struct enet_cb), GFP_KERNEL);
 	if (!priv->rx_cbs) 
 	{
-		printk("my_open(): failed to allocate memory for RX ring buffer\n");
+		printk("my_init_dma(): failed to allocate memory for RX ring buffer\n");
 		return -ENOMEM;
 	}
 
@@ -470,6 +470,81 @@ static irqreturn_t my_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+// 受信のモードをセットする
+static void my_set_rx_mode(struct net_device *dev)
+{
+	struct bcmgenet_priv *priv = netdev_priv(dev);
+	u32 reg;
+
+	// promiscuosモードで受信する
+	reg |= CMD_PROMISC;
+	bcmgenet_umac_writel(priv, reg, UMAC_CMD);
+	bcmgenet_umac_writel(priv, 0, UMAC_MDF_CTRL);
+	return;
+
+}
+
+// 各リングごとに渡してある割り込み有効化ハンドラを呼び出して割り込みを有効化する
+static void my_enable_rx(struct my_priv *priv)
+{
+	unsigned int i;
+	struct my_rx_ring *ring;
+
+	// my_init_rx_ringで渡した割り込み有効化ハンドラを呼び出して対象を渡す
+	for (i = 0; i < priv->hw_params->rx_queues; ++i) {
+		ring = &priv->rx_rings[i];
+		ring->int_enable(ring);
+	}
+
+	ring = &priv->rx_rings[DESC_INDEX];
+	ring->int_enable(ring);
+
+}
+
+// macの有効化
+static void umac_enable_set(struct bcmgenet_priv *priv, u32 mask, bool enable)
+{
+	u32 reg;
+
+	// umacレジスタブロックのUMAC_CMDレジスタに書き込む
+	reg = my_umac_readl(priv, UMAC_CMD);
+	reg |= mask;
+	bcmgenet_umac_writel(priv, reg, UMAC_CMD);
+
+}
+
+// phy<->mac間の割り込みの有効化
+static void my_link_intr_enable(struct my_priv *priv)
+{
+	u32 int0_enable = 0;
+
+	// intrl2_0レジスタブロックのINTRL2_CPU_MASK_CLEARレジスタに書き込む
+	int0_enable |= UMAC_IRQ_LINK_EVENT;
+	bcmgenet_intrl2_0_writel(priv, int0_enable, INTRL2_CPU_MASK_CLEAR);
+}
+
+// 受信に必要なコンポーネントを有効化する
+// エンジンをかける
+static void my_netif_start(struct net_device *dev)
+{
+	struct bcmgenet_priv *priv = netdev_priv(dev);
+
+	// 受信モードをセットする、promiscで受信する
+	my_set_rx_mode(dev);
+
+	// 各リングごとに渡してある割り込み有効化ハンドラを呼び出して割り込みを有効化する
+	my_enable_rx(priv);
+
+	// macをrxに関して有効化する
+	umac_enable_set(priv, CMD_RX_EN, true);
+
+	// phy<->mac間の割り込みを有効化する、たぶん
+	my_link_intr_enable(priv);
+
+	// phyを有効化している、たぶん
+	phy_start(dev->phydev);
+}
+
 // .openハンドラを用意する
 static int my_open(struct net_device *ndev)
 {
@@ -507,8 +582,8 @@ static int my_open(struct net_device *ndev)
 	
 	printk("my_open(): successfully registered my receive handler\n");
 	
-	// 
-	netif_start_queue(dev);
+	// phy,mac,ringなどなど割り込みを発生させるのに必要なコンポーネントを有効化する
+	my_netif_start(dev);
 	
 	return 0;
 		
