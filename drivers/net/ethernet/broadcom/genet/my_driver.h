@@ -12,6 +12,10 @@
 
 #include "bcmgenet.h"
 
+/* Tx/Rx DMA register offset, skip 256 descriptors */
+#define WORDS_PER_BD(p)		(p->hw_params->words_per_bd)
+#define DMA_DESC_SIZE		(WORDS_PER_BD(priv) * sizeof(u32))
+
 #define GENET_RDMA_REG_OFF	(priv->hw_params->rdma_offset + TOTAL_DESC * DMA_DESC_SIZE)
 
 // デバイスspecificなパラメータ
@@ -20,19 +24,47 @@ struct my_hw_params {
 	unsigned int rdma_offset;
 	// とりあえず必要、まだ把握できていない
 	unsigned int words_per_bd;
+	// リングの数
+	u8		rx_queues;
 };
 
 // DMA channel base番地からそれぞれのレジスタ番地へのoffset
-// dma channel ２をNICは使用している
+// dma channel 2をNICは使用している
 enum dma_reg {
 	DMA_RING_CFG = 0,
 	DMA_CTRL,
+	DMA_RING0_TIMEOUT,
+	DMA_SCB_BURST_SIZE,
 };
 static const u8 my_dma_regs[] = {
 	// control and statusレジスタ
 	[DMA_RING_CFG]		= 0x00,
 	// コントロールレジスタ
 	[DMA_CTRL]		= 0x04,
+	[DMA_RING0_TIMEOUT]		= 0x2C,
+	[DMA_SCB_BURST_SIZE]		= 0x0C,
+};
+enum dma_ring_reg {
+	DMA_MBUF_DONE_THRESH,
+	RDMA_PROD_INDEX,
+	RDMA_CONS_INDEX,
+	DMA_RING_BUF_SIZE,
+	RDMA_XON_XOFF_THRESH,
+	DMA_START_ADDR,
+	RDMA_READ_PTR,
+	RDMA_WRITE_PTR,
+	DMA_END_ADDR,
+};
+static const u8 my_dma_ring_reg[] = {
+	[DMA_MBUF_DONE_THRESH]		= 0x24,
+	[RDMA_PROD_INDEX]		= 0x08,
+	[RDMA_CONS_INDEX]		= 0x0C,
+	[DMA_RING_BUF_SIZE]		= 0x10,
+	[RDMA_XON_XOFF_THRESH]		= 0x28,
+	[DMA_START_ADDR]		= 0x14,
+	[RDMA_READ_PTR]		= 0x2C,
+	[RDMA_WRITE_PTR]		= 0x00,
+	[DMA_END_ADDR]		= 0x1C,
 };
 
 // リングの構造体
@@ -92,15 +124,6 @@ struct my_priv {
 	wait_queue_head_t wq;
 	
 };
-									
-// 自分用に再定義する、umac周りのレジスタの状態を取得する
-// static inline u32 my_umac_readl(struct my_priv *priv, u32 off)
-// {	
-// 	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) 
-// 		return __raw_readl(priv->base + GENET_UMAC_OFF + off);		
-// 	else								
-// 		return readl_relaxed(priv->base + GENET_UMAC_OFF + off);	
-// }
 
 // 自分用に再定義する、受信バッファコントロールレジスタの状態を取得する
 // SYSレジスタブロックからの読み取りを行う
@@ -208,15 +231,15 @@ static inline void my_rdma_writel(struct my_priv *priv, u32 val, enum dma_reg re
 static inline u32 my_rdma_ring_readl(struct my_priv *priv, unsigned int ring, enum dma_reg reg_type)
 {	
 	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) 
-		return __raw_readl(priv->base + GENET_RDMA_REG_OFF + (DMA_RING_SIZE * ring) + genet_dma_ring_regs[r]);		
+		return __raw_readl(priv->base + GENET_RDMA_REG_OFF + (DMA_RING_SIZE * ring) + my_dma_ring_regs[reg_type]);		
 	else								
-		return readl_relaxed(priv->base + GENET_RDMA_REG_OFF + (DMA_RING_SIZE * ring) + genet_dma_ring_regs[r]);	
+		return readl_relaxed(priv->base + GENET_RDMA_REG_OFF + (DMA_RING_SIZE * ring) + my_dma_ring_regs[reg_type]);	
 }
 // rx ringレジスタブロックへの書き込みを行う
 static inline void my_rdma_ring_writel(struct my_priv *priv, unsigned int ring, u32 val, enum dma_reg reg_type)
 {									
 	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
-		__raw_writel(val, priv->base + GENET_RDMA_REG_OFF + (DMA_RING_SIZE * ring) + genet_dma_ring_regs[r]);	
+		__raw_writel(val, priv->base + GENET_RDMA_REG_OFF + (DMA_RING_SIZE * ring) + my_dma_ring_regs[reg_type]);	
 	else								
-		writel_relaxed(val, priv->base + GENET_RDMA_REG_OFF + (DMA_RING_SIZE * ring) + genet_dma_ring_regs[r]);		
+		writel_relaxed(val, priv->base + GENET_RDMA_REG_OFF + (DMA_RING_SIZE * ring) + my_dma_ring_regs[reg_type]);		
 }

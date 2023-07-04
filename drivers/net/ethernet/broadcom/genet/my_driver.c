@@ -39,8 +39,11 @@
 #define WORDS_PER_BD(p)		(p->hw_params->words_per_bd)
 #define DMA_DESC_SIZE		(WORDS_PER_BD(priv) * sizeof(u32))
 
-#define GENET_RDMA_REG_OFF	(priv->hw_params->rdma_offset + \
-				TOTAL_DESC * DMA_DESC_SIZE)
+#define GENET_RDMA_REG_OFF	(priv->hw_params->rdma_offset + TOTAL_DESC * DMA_DESC_SIZE)
+
+#define SKB_ALIGNMENT		32
+
+#define RX_BUF_LENGTH		2048
 
 #define DRIVER_NAME "RYOZ_DRIVER"
 
@@ -54,6 +57,7 @@ static struct my_hw_params *my_set_hw_params(struct my_hw_params *hw_params)
 	// https://github.com/raspberrypi/linux/blob/96110e96f1a82e236afb9a248258f1ef917766e9/drivers/net/ethernet/broadcom/genet/bcmgenet.c#L3758
 	hw_params->rdma_offset = 0x2000;
 	hw_params->words_per_bd = 3;
+	hw_params->rx_queues = 0;
 	
 	return hw_params;
 }
@@ -97,23 +101,42 @@ static inline void my_rx_ring_int_disable(struct my_rx_ring *ring)
 	my_intrl2_1_writel(ring->priv, 1 << (UMAC_IRQ1_RX_INTR_SHIFT + ring->index), INTRL2_CPU_MASK_SET);
 }
 
-// 渡されたリングに存在するコントロールブロックそれぞれにskbを確保する
-static int my_alloc_rx_buffers(struct my_priv *priv, struct my_rx_ring *ring)
+// コントロールブロックに割り当てたリソースを解放する
+static struct sk_buff *my_free_rx_cb(struct device *dev, struct enet_cb *cb)
 {
-	struct enet_cb *cb;
 	struct sk_buff *skb;
-	int i;
 
-	for (i = 0; i < ring->size; i++) {
-		cb = ring->cbs + i;
-		skb = bcmgenet_rx_refill(priv, cb);
-		if (skb)
-			dev_consume_skb_any(skb);
-		if (!cb->skb)
-			return -ENOMEM;
+	skb = cb->skb;
+	cb->skb = NULL;
+
+	if (dma_unmap_addr(cb, dma_addr)) {
+		dma_unmap_single(dev, dma_unmap_addr(cb, dma_addr), dma_unmap_len(cb, dma_len), DMA_FROM_DEVICE);
+		dma_unmap_addr_set(cb, dma_addr, 0);
 	}
 
-	return 0;
+	return skb;
+}
+
+// 受信バッファに割り当てたリソースを解放する
+static void my_free_rx_buffers(struct my_oriv *priv)
+{
+	struct sk_buff *skb;
+	struct enet_cb *cb;
+	int i;
+
+	for (i = 0; i < priv->num_rx_bds; i++) {
+		cb = &priv->rx_cbs[i];
+
+		skb = my_free_rx_cb(&priv->pdev->dev, cb);
+		if (skb)
+			dev_consume_skb_any(skb);
+	}
+}
+
+// 渡されたコントロールブロックdma_mappingedアドレスをdmaレジスタブロックに書き込んでいる
+static inline void dmadesc_set_addr(struct my_priv *priv, void __iomem *d, dma_addr_t addr)
+{
+	my_writel(lower_32_bits(addr), d + DMA_DESC_ADDRESS_LO);
 }
 
 // 渡されたコントロールブロック用にskbを確保して割り当てる
@@ -125,7 +148,7 @@ static struct sk_buff *my_rx_refill(struct my_priv *priv, struct enet_cb *cb)
 	dma_addr_t mapping;
 
 	// skbを確保する
-	skb = __netdev_alloc_skb(priv->dev, priv->rx_buf_len + SKB_ALIGNMENT, GFP_ATOMIC | __GFP_NOWARN);
+	skb = __netdev_alloc_skb(priv->ndev, priv->rx_buf_len + SKB_ALIGNMENT, GFP_ATOMIC | __GFP_NOWARN);
 	if (!skb) {
 		printk(KERN_INFO "my_rx_refill(): could not allocated skb for the control block\n");
 		return NULL;
@@ -140,7 +163,7 @@ static struct sk_buff *my_rx_refill(struct my_priv *priv, struct enet_cb *cb)
 	}
 
 	// 現在cbに割り当てられているskbをunmapする、新たに確保したskbを割り当てるため
-	rx_skb = bcmgenet_free_rx_cb(kdev, cb);
+	rx_skb = my_free_rx_cb(kdev, cb);
 
 	// 新たに確保したskbをcbに割り当てる
 	cb->skb = skb;
@@ -152,16 +175,35 @@ static struct sk_buff *my_rx_refill(struct my_priv *priv, struct enet_cb *cb)
 	return rx_skb;
 }
 
+// 渡されたリングに存在するコントロールブロックそれぞれにskbを確保する
+static int my_alloc_rx_buffers(struct my_priv *priv, struct my_rx_ring *ring)
+{
+	struct enet_cb *cb;
+	struct sk_buff *skb;
+	int i;
+
+	for (i = 0; i < ring->size; i++) {
+		cb = ring->cbs + i;
+		skb = my_rx_refill(priv, cb);
+		if (skb)
+			dev_consume_skb_any(skb);
+		if (!cb->skb)
+			return -ENOMEM;
+	}
+
+	return 0;
+}
+
 // coalescing engineのセットアップ
 static void my_set_rx_coalesce(struct my_rx_ring *ring, u32 usecs, u32 pkts)
 {
-	struct bcmgenet_priv *priv = ring->priv;
+	struct my_priv *priv = ring->priv;
 	unsigned int i = ring->index;
 	u32 reg;
 
 	my_rdma_ring_writel(priv, i, pkts, DMA_MBUF_DONE_THRESH);
 
-	reg = bcmgenet_rdma_readl(priv, DMA_RING0_TIMEOUT + i);
+	reg = my_rdma_readl(priv, DMA_RING0_TIMEOUT + i);
 	reg &= ~DMA_TIMEOUT_MASK;
 	reg |= DIV_ROUND_UP(usecs * 1000, 8192);
 	my_rdma_writel(priv, reg, DMA_RING0_TIMEOUT + i);
@@ -188,7 +230,7 @@ static void my_umac_reset(struct my_priv *priv)
 	my_sys_writel(priv, reg, SYS_RBUF_FLUSH_CTRL);
 	udelay(10);
 }
-static void reset_umac(struct bcmgenet_priv *priv)
+static void reset_umac(struct my_priv *priv)
 {
 	// my_umac_resetでやっていることと何が違うのか、この辺りはデータシートで確認しないとわからないかも
 	// たぶん受信バッファを解放している
@@ -241,7 +283,6 @@ static int my_init_rx_ring(struct my_priv *priv, unsigned int index, unsigned in
 	struct my_rx_ring *ring = &priv->rx_rings[index];
 	u32 words_per_bd = WORDS_PER_BD(priv);
 	int ret;
-	u32 usecs, pkts;
 
     // privのリングにさらにprivを持たせている
 	ring->priv = priv;
@@ -302,18 +343,17 @@ static int my_init_rx_ring(struct my_priv *priv, unsigned int index, unsigned in
 // 受信queueを初期化する
 static int my_init_rx_queues(struct net_device *dev)
 {
-	struct bcmgenet_priv *priv = netdev_priv(dev);
+	struct my_priv *priv = netdev_priv(dev);
 	enum dma_reg reg_type;
 	u32 i;
-	u32 dma_enable_reg;
-	u32 dma_ctrl_reg;
-	u32 ring_cfg_reg;
+	u32 dma_enable;
+	u32 dma_ctrl, ring_cfg;
 	int ret;
 
 	// rdmaコントロールレジスタのbitsを取得する
 	reg_type = DMA_CTRL;
 	dma_ctrl = my_rdma_readl(priv, DMA_CTRL);
-	dma_enable_reg = dma_ctrl_reg & DMA_EN;
+	dma_enable = dma_ctrl & DMA_EN;
 
 	// rdmaコントロールレジスタのenable bitsをセットする
 	my_rdma_writel(priv, dma_ctrl, DMA_CTRL);
@@ -321,7 +361,7 @@ static int my_init_rx_queues(struct net_device *dev)
 	dma_ctrl = 0;
 	ring_cfg = 0;
 
-		/* Initialize Rx priority queues */
+	/* Initialize Rx priority queues */
 	// 1から15までのqueueを初期化する
 	// ここ、bcmgenet_init_rx_ring、結構な処理を行っているので後に回す
 	for (i = 0; i < priv->hw_params->rx_queues; i++) {
@@ -387,9 +427,10 @@ static u32 my_disable_dma(struct my_priv *priv)
 }
 
 // dmaを初期化する
-static int my_init_dma(struct bcmgenet_priv *priv)
+static int my_init_dma(struct my_priv *priv)
 {
-
+	int ret;
+	unsigned int i;
 	enum dma_reg reg_type;
 
 	// コントロールブロック単体の構造体
@@ -424,7 +465,7 @@ static int my_init_dma(struct bcmgenet_priv *priv)
 	// 有効化に失敗した場合に確保したリングバッファ分のメモリを解放する
 		if (ret) {
 		netdev_err(priv->dev, "failed to initialize Rx queues\n");
-		bcmgenet_free_rx_buffers(priv);
+		my_free_rx_buffers(priv);
 		kfree(priv->rx_cbs);
 		kfree(priv->tx_cbs);
 		return ret;
@@ -473,13 +514,13 @@ static irqreturn_t my_isr(int irq, void *dev_id)
 // 受信のモードをセットする
 static void my_set_rx_mode(struct net_device *dev)
 {
-	struct bcmgenet_priv *priv = netdev_priv(dev);
+	struct my_priv *priv = netdev_priv(dev);
 	u32 reg;
 
 	// promiscuosモードで受信する
 	reg |= CMD_PROMISC;
-	bcmgenet_umac_writel(priv, reg, UMAC_CMD);
-	bcmgenet_umac_writel(priv, 0, UMAC_MDF_CTRL);
+	my_umac_writel(priv, reg, UMAC_CMD);
+	my_umac_writel(priv, 0, UMAC_MDF_CTRL);
 	return;
 
 }
@@ -502,14 +543,14 @@ static void my_enable_rx(struct my_priv *priv)
 }
 
 // macの有効化
-static void umac_enable_set(struct bcmgenet_priv *priv, u32 mask, bool enable)
+static void umac_enable_set(struct my_priv *priv, u32 mask, bool enable)
 {
 	u32 reg;
 
 	// umacレジスタブロックのUMAC_CMDレジスタに書き込む
 	reg = my_umac_readl(priv, UMAC_CMD);
 	reg |= mask;
-	bcmgenet_umac_writel(priv, reg, UMAC_CMD);
+	my_umac_writel(priv, reg, UMAC_CMD);
 
 }
 
@@ -520,14 +561,14 @@ static void my_link_intr_enable(struct my_priv *priv)
 
 	// intrl2_0レジスタブロックのINTRL2_CPU_MASK_CLEARレジスタに書き込む
 	int0_enable |= UMAC_IRQ_LINK_EVENT;
-	bcmgenet_intrl2_0_writel(priv, int0_enable, INTRL2_CPU_MASK_CLEAR);
+	my_intrl2_0_writel(priv, int0_enable, INTRL2_CPU_MASK_CLEAR);
 }
 
 // 受信に必要なコンポーネントを有効化する
 // エンジンをかける
 static void my_netif_start(struct net_device *dev)
 {
-	struct bcmgenet_priv *priv = netdev_priv(dev);
+	struct my_priv *priv = netdev_priv(dev);
 
 	// 受信モードをセットする、promiscで受信する
 	my_set_rx_mode(dev);
@@ -583,7 +624,7 @@ static int my_open(struct net_device *ndev)
 	printk("my_open(): successfully registered my receive handler\n");
 	
 	// phy,mac,ringなどなど割り込みを発生させるのに必要なコンポーネントを有効化する
-	my_netif_start(dev);
+	my_netif_start(ndev);
 	
 	return 0;
 		
@@ -740,6 +781,12 @@ static int my_platform_device_probe(struct platform_device *pdev)
 		printk(KERN_INFO "my_platform_device_probe(): error registering ndev\n");
 		goto err;
 	}
+
+	/* setup number of real queues  + 1 (GENET_V1 has 0 hardware queues
+	 * just the ring 16 descriptor based TX
+	 */
+	// rx queueの数を指定する、これを呼ばないとrx_queuesは0のままである
+	netif_set_real_num_rx_queues(priv->dev, priv->hw_params->rx_queues + 1);
 	
 	// 一連のprobeを完了
 	printk(KERN_INFO "my_platform_device_probe(): successfully registered ndev\n");
