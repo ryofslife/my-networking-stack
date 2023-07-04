@@ -118,7 +118,7 @@ static struct sk_buff *my_free_rx_cb(struct device *dev, struct enet_cb *cb)
 }
 
 // 受信バッファに割り当てたリソースを解放する
-static void my_free_rx_buffers(struct my_oriv *priv)
+static void my_free_rx_buffers(struct my_priv *priv)
 {
 	struct sk_buff *skb;
 	struct enet_cb *cb;
@@ -460,14 +460,13 @@ static int my_init_dma(struct my_priv *priv)
 
 	/* Initialize Rx queues */
  	// etherコントローラのdma・割り込みの有効化を行う
- 	ret = my_init_rx_queues(priv->dev);
+ 	ret = my_init_rx_queues(priv->ndev);
 
 	// 有効化に失敗した場合に確保したリングバッファ分のメモリを解放する
 		if (ret) {
-		netdev_err(priv->dev, "failed to initialize Rx queues\n");
+		printk("my_init_dma(): failed to initialize Rx queues\n");
 		my_free_rx_buffers(priv);
 		kfree(priv->rx_cbs);
-		kfree(priv->tx_cbs);
 		return ret;
 	}
 
@@ -786,7 +785,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	 * just the ring 16 descriptor based TX
 	 */
 	// rx queueの数を指定する、これを呼ばないとrx_queuesは0のままである
-	netif_set_real_num_rx_queues(priv->dev, priv->hw_params->rx_queues + 1);
+	netif_set_real_num_rx_queues(priv->ndev, priv->hw_params->rx_queues + 1);
 	
 	// 一連のprobeを完了
 	printk(KERN_INFO "my_platform_device_probe(): successfully registered ndev\n");

@@ -26,6 +26,8 @@ struct my_hw_params {
 	unsigned int words_per_bd;
 	// リングの数
 	u8		rx_queues;
+	// リングに用意されているバッファディスクリプタの数
+	u8		rx_bds_per_q;
 };
 
 // DMA channel base番地からそれぞれのレジスタ番地へのoffset
@@ -55,7 +57,7 @@ enum dma_ring_reg {
 	RDMA_WRITE_PTR,
 	DMA_END_ADDR,
 };
-static const u8 my_dma_ring_reg[] = {
+static const u8 my_dma_ring_regs[] = {
 	[DMA_MBUF_DONE_THRESH]		= 0x24,
 	[RDMA_PROD_INDEX]		= 0x08,
 	[RDMA_CONS_INDEX]		= 0x0C,
@@ -115,13 +117,15 @@ struct my_priv {
 	// リングの構造体を配列としてDESC_INDEX=16個分確保する、ハードにqueueが16ある、たぶん
 	struct my_rx_ring rx_rings[DESC_INDEX + 1];
 	// 受信バッファのサイズ
-	
 	unsigned int rx_buf_len;
+	// バッファディスクリプタの番地
+	void __iomem *rx_bds;
 	
 	// その他
 	bool internal_phy;
 	struct platform_device *mii_pdev;
 	wait_queue_head_t wq;
+	u32 dma_max_burst_length;
 	
 };
 
@@ -228,7 +232,7 @@ static inline void my_rdma_writel(struct my_priv *priv, u32 val, enum dma_reg re
 }
 
 // rx ringレジスタブロックからの読み取りを行う
-static inline u32 my_rdma_ring_readl(struct my_priv *priv, unsigned int ring, enum dma_reg reg_type)
+static inline u32 my_rdma_ring_readl(struct my_priv *priv, unsigned int ring, enum dma_ring_reg reg_type)
 {	
 	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) 
 		return __raw_readl(priv->base + GENET_RDMA_REG_OFF + (DMA_RING_SIZE * ring) + my_dma_ring_regs[reg_type]);		
@@ -236,7 +240,7 @@ static inline u32 my_rdma_ring_readl(struct my_priv *priv, unsigned int ring, en
 		return readl_relaxed(priv->base + GENET_RDMA_REG_OFF + (DMA_RING_SIZE * ring) + my_dma_ring_regs[reg_type]);	
 }
 // rx ringレジスタブロックへの書き込みを行う
-static inline void my_rdma_ring_writel(struct my_priv *priv, unsigned int ring, u32 val, enum dma_reg reg_type)
+static inline void my_rdma_ring_writel(struct my_priv *priv, unsigned int ring, u32 val, enum dma_ring_reg reg_type)
 {									
 	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
 		__raw_writel(val, priv->base + GENET_RDMA_REG_OFF + (DMA_RING_SIZE * ring) + my_dma_ring_regs[reg_type]);	
