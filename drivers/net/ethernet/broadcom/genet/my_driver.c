@@ -247,8 +247,6 @@ static void reset_umac(struct my_priv *priv)
 // macを初期化する
 static void init_umac(struct my_priv *priv)
 {
-	// probeでprivにplatform_deviceは置いているのでOKなはず
-	struct device *kdev = &priv->pdev->dev;
 	// レジスタの状態を取得してマスクしていく
 	u32 reg;
 	// phyのレジスタに対するマスク、たぶん
@@ -515,6 +513,8 @@ static void my_set_rx_mode(struct net_device *dev)
 {
 	struct my_priv *priv = netdev_priv(dev);
 	u32 reg;
+
+	reg = my_umac_readl(priv, UMAC_CMD);
 
 	// promiscuosモードで受信する
 	reg |= CMD_PROMISC;
