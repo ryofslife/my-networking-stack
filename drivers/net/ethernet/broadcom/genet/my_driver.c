@@ -772,6 +772,19 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	oops = bcmgenet_mii_init(ndev);
 	if (oops)
 		goto err;
+
+	printk("my_platform_device_probe(): the number of rx queue was %u\n", priv->hw_params->rx_queues);
+
+	// ndevをmutexする
+	rtnl_lock();
+	/* setup number of real queues  + 1 (GENET_V1 has 0 hardware queues
+	 * just the ring 16 descriptor based TX
+	 */
+	// rx queueの数を指定する、これを呼ばないとrx_queuesは0のままである
+	netif_set_real_num_rx_queues(priv->ndev, priv->hw_params->rx_queues + 1);
+	rtnl_unlock();
+
+	printk("my_platform_device_probe(): the number of rx queue is %u\n", priv->hw_params->rx_queues);
 	
 	// 一通りできたら以下を呼ぶ
 	ooops = register_netdev(ndev);
@@ -780,12 +793,6 @@ static int my_platform_device_probe(struct platform_device *pdev)
 		printk(KERN_INFO "my_platform_device_probe(): error registering ndev\n");
 		goto err;
 	}
-
-	/* setup number of real queues  + 1 (GENET_V1 has 0 hardware queues
-	 * just the ring 16 descriptor based TX
-	 */
-	// rx queueの数を指定する、これを呼ばないとrx_queuesは0のままである
-	netif_set_real_num_rx_queues(priv->ndev, priv->hw_params->rx_queues + 1);
 	
 	// 一連のprobeを完了
 	printk(KERN_INFO "my_platform_device_probe(): successfully registered ndev\n");
