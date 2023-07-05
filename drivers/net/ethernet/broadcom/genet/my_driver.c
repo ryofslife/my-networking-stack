@@ -45,6 +45,8 @@
 
 #define RX_BUF_LENGTH		2048
 
+#define GENET_MAX_MQ_CNT	4
+
 #define DRIVER_NAME "RYOZ_DRIVER"
 
 // デバイスspecificなパラメータを投入する
@@ -691,7 +693,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	printk("my_platform_device_probe(): the device being probed is %d\n", *pdev->name);
 	
 	// single queueで仮想デバイスをprovisionする
-	ndev = alloc_etherdev(sizeof(priv));
+	ndev = alloc_etherdev_mqs(sizeof(priv), GENET_MAX_MQ_CNT + 1, GENET_MAX_MQ_CNT + 1);
 	if (ndev)
 	{	
 		printk("my_platform_device_probe(): successfully allocated net_device\n");
