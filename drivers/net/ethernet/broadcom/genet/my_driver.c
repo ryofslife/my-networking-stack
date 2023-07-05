@@ -532,6 +532,7 @@ static void my_enable_rx(struct my_priv *priv)
 
 	// my_init_rx_ringで渡した割り込み有効化ハンドラを呼び出して対象を渡す
 	for (i = 0; i < priv->hw_params->rx_queues; ++i) {
+		printk("my_enable_rx(): initializing the ring of %u\n", i);
 		ring = &priv->rx_rings[i];
 		ring->int_enable(ring);
 	}
@@ -784,6 +785,8 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	netif_set_real_num_rx_queues(priv->ndev, priv->hw_params->rx_queues + 1);
 	rtnl_unlock();
 
+	printk("my_platform_device_probe(): the number of rx queue is %u\n", ndev->real_num_rx_queues);
+	priv->hw_params->rx_queues = ndev->real_num_rx_queues;
 	printk("my_platform_device_probe(): the number of rx queue is %u\n", priv->hw_params->rx_queues);
 	
 	// 一通りできたら以下を呼ぶ
