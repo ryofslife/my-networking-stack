@@ -496,16 +496,29 @@ static void my_enable_dma(struct my_priv *priv, u32 dma_ctrl)
 
 }
 
-// 受信ハンドラを用意する
-static irqreturn_t my_isr(int irq, void *dev_id)
+// 通常受信ハンドラを用意する
+static irqreturn_t my_isr0(int irq, void *dev_id)
 {
 	// my_privへの型変換
 	struct my_priv *priv = (struct my_priv *)dev_id;
 	
 	// 割り込みがあった
-	printk("my_isr(): Hi there, there was an interrupt\n");
-	printk("my_isr(): interrupt with an irq of %d\n", irq);
-	printk("my_isr(): device with an irq of %d\n", priv->irq);
+	printk("my_isr0(): Hi there, there was an interrupt\n");
+	printk("my_isr0(): interrupt with an irq of %d\n", irq);
+	printk("my_isr0(): device with an irq of %d\n", priv->irq0);
+	
+	return IRQ_HANDLED;
+}
+// 優先受信ハンドラを用意する
+static irqreturn_t my_isr1(int irq, void *dev_id)
+{
+	// my_privへの型変換
+	struct my_priv *priv = (struct my_priv *)dev_id;
+	
+	// 割り込みがあった
+	printk("my_isr1(): Hi there, there was an interrupt\n");
+	printk("my_isr1(): interrupt with an irq of %d\n", irq);
+	printk("my_isr1(): device with an irq of %d\n", priv->irq0);
 	
 	return IRQ_HANDLED;
 }
@@ -594,6 +607,8 @@ static int my_open(struct net_device *ndev)
 	struct my_priv *priv = netdev_priv(ndev);
 	int ret;
 	unsigned long dma_ctrl;
+	char *isr0 = "warikomi0";
+	char *isr1 = "warikomi1";
 
 	// macをリセットする
 	my_umac_reset(priv);
@@ -616,10 +631,16 @@ static int my_open(struct net_device *ndev)
 	my_enable_dma(priv, dma_ctrl);
 	
 	// irqの登録を行う
- 	ret = request_irq(priv->irq, my_isr, IRQF_SHARED, ndev->name, priv);
+ 	ret = request_irq(priv->irq0, my_isr0, IRQF_SHARED, isr0, priv);
 	if (ret < 0) 
 	{
-		printk("my_open(): failed to register my receive handler\n");
+		printk("my_open(): failed to register my regular receive handler\n");
+		return -1;
+	}
+ 	ret = request_irq(priv->irq1, my_isr1, IRQF_SHARED, isr1, priv);
+	if (ret < 0) 
+	{
+		printk("my_open(): failed to register my priority receive handler\n");
 		return -1;
 	}
 	
@@ -638,7 +659,8 @@ static int my_close(struct net_device *ndev)
 	struct my_priv *priv = netdev_priv(ndev);
 	
 	// irqの解除を行う
-	free_irq(priv->irq, priv);
+	free_irq(priv->irq0, priv);
+	free_irq(priv->irq1, priv);
 	
 	// .openで呼び出していないので、ここで呼ぶ必要はないはず
 	// netif_stop_queue(dev);
@@ -704,15 +726,25 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	
 	// 返されたndevからprivを取得する、mmioやirqを投入してくため
 	priv = netdev_priv(ndev);
-	
-	// 優先キューに紐づくirqをprivに投入する
-	priv->irq = platform_get_irq(pdev, 1);
-	if (priv->irq < 0)
+
+	// 通常キューに紐づくirqをprivに投入する
+	priv->irq0 = platform_get_irq(pdev, 0);
+	if (priv->irq0 < 0)
 	{
 		printk("my_platform_device_probe(): failed to get irq from the device tree\n");
 		goto err;
 	} else {
-		printk("my_platform_device_probe(): successfully got the irq of %d\n", priv->irq);
+		printk("my_platform_device_probe(): successfully got the irq0 of %d\n", priv->irq0);
+	}
+	
+	// 優先キューに紐づくirqをprivに投入する
+	priv->irq1 = platform_get_irq(pdev, 1);
+	if (priv->irq1 < 0)
+	{
+		printk("my_platform_device_probe(): failed to get irq from the device tree\n");
+		goto err;
+	} else {
+		printk("my_platform_device_probe(): successfully got the irq1 of %d\n", priv->irq1);
 	}
 	
 	// mmioのベースアドレスを取得、このタイミングではまだ物理アドレスなので仮想アドレスに変換する必要がある

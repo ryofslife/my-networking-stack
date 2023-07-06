@@ -95,8 +95,10 @@ struct my_priv {
 	
 	// mmio用アドレス
 	void __iomem *base;
-	// 割り込み番号
-	int irq;
+	// 割り込み番号、通常
+ 	int irq0;
+	// 割り込み番号、優先
+ 	int irq1;
 	// probe時に投入する、pdevはkernelから渡されるalloc_etherdevに基づくデバイスの情報
 	struct net_device *ndev;
 	// probe時に投入する、pdevはkernelから渡されるデバイスツリーに基づくデバイスの情報
