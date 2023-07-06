@@ -35,7 +35,15 @@
 
 #include "my_driver.h"
 
-// Tx/Rx DMA register offset, skip 256 descriptors(引用)
+// intrl2レジスタブロックのレジスタの番地
+#define INTRL2_CPU_STAT			0x00
+#define INTRL2_CPU_SET			0x04
+#define INTRL2_CPU_CLEAR		0x08
+#define INTRL2_CPU_MASK_STATUS		0x0C
+#define INTRL2_CPU_MASK_SET		0x10
+#define INTRL2_CPU_MASK_CLEAR		0x14
+
+// Tx/Rx DMA register offset, skip 256 descriptors
 #define WORDS_PER_BD(p)		(p->hw_params->words_per_bd)
 #define DMA_DESC_SIZE		(WORDS_PER_BD(priv) * sizeof(u32))
 
@@ -501,12 +509,18 @@ static irqreturn_t my_isr0(int irq, void *dev_id)
 {
 	// my_privへの型変換
 	struct my_priv *priv = (struct my_priv *)dev_id;
+	unsigned int status;
 	
 	// 割り込みがあった
 	printk("my_isr0(): Hi there, there was an interrupt\n");
 	printk("my_isr0(): interrupt with an irq of %d\n", irq);
 	printk("my_isr0(): device with an irq of %d\n", priv->irq0);
-	
+
+	// 割り込みbitsを無効化する
+	// しないと延々と割り込みが入り続ける現象が発生する、している
+	status = my_intrl2_0_readl(priv, INTRL2_CPU_STAT) & ~my_intrl2_0_readl(priv, INTRL2_CPU_MASK_STATUS);
+	my_intrl2_0_writel(priv, status, INTRL2_CPU_CLEAR);
+
 	return IRQ_HANDLED;
 }
 // 優先受信ハンドラを用意する
@@ -514,12 +528,18 @@ static irqreturn_t my_isr1(int irq, void *dev_id)
 {
 	// my_privへの型変換
 	struct my_priv *priv = (struct my_priv *)dev_id;
+	unsigned int status;
 	
 	// 割り込みがあった
 	printk("my_isr1(): Hi there, there was an interrupt\n");
 	printk("my_isr1(): interrupt with an irq of %d\n", irq);
 	printk("my_isr1(): device with an irq of %d\n", priv->irq0);
 	
+	// 割り込みbitsを無効化する
+	// しないと延々と割り込みが入り続ける現象が発生する、している
+	status = my_intrl2_1_readl(priv, INTRL2_CPU_STAT) & ~my_intrl2_1_readl(priv, INTRL2_CPU_MASK_STATUS);
+	my_intrl2_1_writel(priv, status, INTRL2_CPU_CLEAR);
+
 	return IRQ_HANDLED;
 }
 
