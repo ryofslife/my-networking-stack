@@ -574,9 +574,10 @@ struct sk_buff *__netdev_alloc_skb(struct net_device *dev, unsigned int len,
 	    (gfp_mask & (__GFP_DIRECT_RECLAIM | GFP_DMA))) {
 		skb = __alloc_skb(len, gfp_mask, SKB_ALLOC_RX, NUMA_NO_NODE);
 		printk("__netdev_alloc_skb():allcating memory for skb which was either too big or small\n");
-		if (!skb)
+		if (!skb) {
 			printk("__netdev_alloc_skb(): failed to allcate memory for skb which was either too big or small\n");
 			goto skb_fail;
+		}
 		goto skb_success;
 	}
 
@@ -598,9 +599,10 @@ struct sk_buff *__netdev_alloc_skb(struct net_device *dev, unsigned int len,
 		local_bh_enable();
 	}
 
-	if (unlikely(!data))
+	if (unlikely(!data)) {
 		printk("__netdev_alloc_skb(): failed to allcate page fragment for skb\n");
 		return NULL;
+	}
 
 	skb = __build_skb(data, len);
 	if (unlikely(!skb)) {
