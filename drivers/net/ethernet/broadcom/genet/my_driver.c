@@ -55,6 +55,9 @@
 
 #define GENET_MAX_MQ_CNT	4
 
+// rx queue 16のバッファディスクリプタの数
+#define GENET_Q16_RX_BD_CNT 256
+
 #define DRIVER_NAME "RYOZ_DRIVER"
 
 // デバイスspecificなパラメータを投入する
@@ -68,6 +71,8 @@ static struct my_hw_params *my_set_hw_params(struct my_hw_params *hw_params)
 	hw_params->rdma_offset = 0x2000;
 	hw_params->words_per_bd = 3;
 	hw_params->rx_queues = 0;
+	// 優先ringのコントロールブロックは0とする
+	hw_params->rx_bds_per_q = 0;
 	
 	return hw_params;
 }
@@ -371,15 +376,23 @@ static int my_init_rx_queues(struct net_device *dev)
 
 	/* Initialize Rx priority queues */
 	// 1から15までのqueueを初期化する
-	// ここ、bcmgenet_init_rx_ring、結構な処理を行っているので後に回す
 	for (i = 0; i < priv->hw_params->rx_queues; i++) {
 		ret = my_init_rx_ring(priv, i, priv->hw_params->rx_bds_per_q, i * priv->hw_params->rx_bds_per_q, (i + 1) * priv->hw_params->rx_bds_per_q);
 
-		if (ret)
+		if (ret) {
 			return ret;
+		}
 
 		ring_cfg |= (1 << i);
 		dma_ctrl |= (1 << (i + DMA_RING_BUF_EN_SHIFT));
+	}
+
+	/* Initialize Rx default queue 16 */
+	// デフォルトの16番目のringを初期化する
+	ret = my_init_rx_ring(priv, DESC_INDEX, GENET_Q16_RX_BD_CNT, priv->hw_params->rx_queues * priv->hw_params->rx_bds_per_q, TOTAL_DESC);
+
+	if (ret) {
+		return ret;
 	}
 
 	// ここでこのマスクはどういう状態なのか？
@@ -391,8 +404,9 @@ static int my_init_rx_queues(struct net_device *dev)
 	my_rdma_writel(priv, ring_cfg, DMA_RING_CFG);
 
 	// re有効化している
-	if (dma_enable)
+	if (dma_enable) {
 		dma_ctrl |= DMA_EN;
+	}
 	my_rdma_writel(priv, dma_ctrl, DMA_CTRL);
 
 	return 0;
@@ -471,7 +485,7 @@ static int my_init_dma(struct my_priv *priv)
  	ret = my_init_rx_queues(priv->ndev);
 
 	// 有効化に失敗した場合に確保したリングバッファ分のメモリを解放する
-		if (ret) {
+	if (ret) {
 		printk("my_init_dma(): failed to initialize Rx queues\n");
 		my_free_rx_buffers(priv);
 		kfree(priv->rx_cbs);
@@ -565,6 +579,7 @@ static void my_enable_rx(struct my_priv *priv)
 	unsigned int i;
 	struct my_rx_ring *ring;
 
+	// 優先ringの有効化
 	// my_init_rx_ringで渡した割り込み有効化ハンドラを呼び出して対象を渡す
 	for (i = 0; i < priv->hw_params->rx_queues; ++i) {
 		printk("my_enable_rx(): initializing the ring of %u\n", i);
@@ -572,6 +587,7 @@ static void my_enable_rx(struct my_priv *priv)
 		ring->int_enable(ring);
 	}
 
+	// 通常リングの有効化
 	ring = &priv->rx_rings[DESC_INDEX];
 	ring->int_enable(ring);
 
@@ -594,6 +610,7 @@ static void my_link_intr_enable(struct my_priv *priv)
 {
 	u32 int0_enable = 0;
 
+	// intrl2_0が通常、intrl2_1が優先である
 	// intrl2_0レジスタブロックのINTRL2_CPU_MASK_CLEARレジスタに書き込む
 	int0_enable |= UMAC_IRQ_LINK_EVENT;
 	my_intrl2_0_writel(priv, int0_enable, INTRL2_CPU_MASK_CLEAR);
@@ -664,7 +681,7 @@ static int my_open(struct net_device *ndev)
 	printk("my_open(): successfully registered my receive handler\n");
 
 	// dmaコントローラを有効化する
-	// my_enable_dma(priv, dma_ctrl);
+	my_enable_dma(priv, dma_ctrl);
 	
 	// phy,mac,ringなどなど割り込みを発生させるのに必要なコンポーネントを有効化する
 	my_netif_start(ndev);
