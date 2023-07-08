@@ -483,6 +483,8 @@ struct sk_buff *__alloc_skb(unsigned int size, gfp_t gfp_mask,
 	bool pfmemalloc;
 	u8 *data;
 
+	printk("__alloc_skb(): trying to allocate buffer of %u\n", size);
+
 	cache = (flags & SKB_ALLOC_FCLONE)
 		? skbuff_fclone_cache : skbuff_head_cache;
 
@@ -490,13 +492,17 @@ struct sk_buff *__alloc_skb(unsigned int size, gfp_t gfp_mask,
 		gfp_mask |= __GFP_MEMALLOC;
 
 	/* Get the HEAD */
-	if ((flags & (SKB_ALLOC_FCLONE | SKB_ALLOC_NAPI)) == SKB_ALLOC_NAPI &&
-	    likely(node == NUMA_NO_NODE || node == numa_mem_id()))
+	if ((flags & (SKB_ALLOC_FCLONE | SKB_ALLOC_NAPI)) == SKB_ALLOC_NAPI && likely(node == NUMA_NO_NODE || node == numa_mem_id())) {
+		printk("__alloc_skb(): allocating head room for napi\n");
 		skb = napi_skb_cache_get();
-	else
+	} else {
+		printk("__alloc_skb(): allocating regular head room\n");
 		skb = kmem_cache_alloc_node(cache, gfp_mask & ~GFP_DMA, node);
-	if (unlikely(!skb))
+	}
+	if (unlikely(!skb)) {
+		printk("__alloc_skb(): failed to allcoate head room\n");
 		return NULL;
+	}
 	prefetchw(skb);
 
 	/* We do our best to align skb_shared_info on a separate cache
@@ -507,8 +513,10 @@ struct sk_buff *__alloc_skb(unsigned int size, gfp_t gfp_mask,
 	size = SKB_DATA_ALIGN(size);
 	size += SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 	data = kmalloc_reserve(size, gfp_mask, node, &pfmemalloc);
-	if (unlikely(!data))
+	if (unlikely(!data)) {
+		printk("__alloc_skb(): failed to allcoate room for data\n");
 		goto nodata;
+	}
 	/* kmalloc(size) might give us more room than requested.
 	 * Put skb_shared_info exactly at the end of allocated zone,
 	 * to allow max possible filling before reallocation.
@@ -573,7 +581,7 @@ struct sk_buff *__netdev_alloc_skb(struct net_device *dev, unsigned int len,
 	    len > SKB_WITH_OVERHEAD(PAGE_SIZE) ||
 	    (gfp_mask & (__GFP_DIRECT_RECLAIM | GFP_DMA))) {
 		skb = __alloc_skb(len, gfp_mask, SKB_ALLOC_RX, NUMA_NO_NODE);
-		printk("__netdev_alloc_skb():allcating memory for skb which was either too big or small\n");
+		printk("__netdev_alloc_skb(): allcating memory for skb which was either too big or small\n");
 		if (!skb) {
 			printk("__netdev_alloc_skb(): failed to allcate memory for skb which was either too big or small\n");
 			goto skb_fail;
