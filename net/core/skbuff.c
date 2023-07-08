@@ -498,7 +498,6 @@ struct sk_buff *__alloc_skb(unsigned int size, gfp_t gfp_mask,
 		skb = kmem_cache_alloc_node(cache, gfp_mask & ~GFP_DMA, node);
 	}
 	if (unlikely(!skb)) {
-		printk("__alloc_skb(): trying to allocate buffer of %u\n", size);
 		printk("__alloc_skb(): failed to allcoate head room\n");
 		return NULL;
 	}
@@ -513,6 +512,7 @@ struct sk_buff *__alloc_skb(unsigned int size, gfp_t gfp_mask,
 	size += SKB_DATA_ALIGN(sizeof(struct skb_shared_info));
 	data = kmalloc_reserve(size, gfp_mask, node, &pfmemalloc);
 	if (unlikely(!data)) {
+		printk("__alloc_skb(): trying to allocate buffer of %u\n", size);
 		printk("__alloc_skb(): failed to allcoate room for data\n");
 		goto nodata;
 	}
