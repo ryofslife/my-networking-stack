@@ -389,11 +389,11 @@ static int my_init_rx_queues(struct net_device *dev)
 
 	/* Initialize Rx default queue 16 */
 	// デフォルトの16番目のringを初期化する
-	// ret = my_init_rx_ring(priv, DESC_INDEX, GENET_Q16_RX_BD_CNT, priv->hw_params->rx_queues * priv->hw_params->rx_bds_per_q, TOTAL_DESC);
+	ret = my_init_rx_ring(priv, DESC_INDEX, GENET_Q16_RX_BD_CNT, priv->hw_params->rx_queues * priv->hw_params->rx_bds_per_q, TOTAL_DESC);
 
-	// if (ret) {
-	// 	return ret;
-	// }
+	if (ret) {
+		return ret;
+	}
 
 	// ここでこのマスクはどういう状態なのか？
 	ring_cfg |= (1 << DESC_INDEX);

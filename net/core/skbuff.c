@@ -483,8 +483,6 @@ struct sk_buff *__alloc_skb(unsigned int size, gfp_t gfp_mask,
 	bool pfmemalloc;
 	u8 *data;
 
-	printk("__alloc_skb(): trying to allocate buffer of %u\n", size);
-
 	cache = (flags & SKB_ALLOC_FCLONE)
 		? skbuff_fclone_cache : skbuff_head_cache;
 
@@ -493,13 +491,14 @@ struct sk_buff *__alloc_skb(unsigned int size, gfp_t gfp_mask,
 
 	/* Get the HEAD */
 	if ((flags & (SKB_ALLOC_FCLONE | SKB_ALLOC_NAPI)) == SKB_ALLOC_NAPI && likely(node == NUMA_NO_NODE || node == numa_mem_id())) {
-		printk("__alloc_skb(): allocating head room for napi\n");
+		// printk("__alloc_skb(): allocating head room for napi\n");
 		skb = napi_skb_cache_get();
 	} else {
-		printk("__alloc_skb(): allocating regular head room\n");
+		// printk("__alloc_skb(): allocating regular head room\n");
 		skb = kmem_cache_alloc_node(cache, gfp_mask & ~GFP_DMA, node);
 	}
 	if (unlikely(!skb)) {
+		printk("__alloc_skb(): trying to allocate buffer of %u\n", size);
 		printk("__alloc_skb(): failed to allcoate head room\n");
 		return NULL;
 	}
