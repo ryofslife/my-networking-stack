@@ -404,7 +404,7 @@ static u32 my_disable_dma(struct my_priv *priv)
 	enum dma_reg reg_type;
 	u32 reg;
 	u32 dma_ctrl;
-	u32 dbg;
+	// u32 dbg;
 	
 	reg_type = DMA_CTRL;
 	
@@ -421,8 +421,8 @@ static u32 my_disable_dma(struct my_priv *priv)
 	my_writel(reg, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
 
 	// 書き込んだ値を読み込んでみる
-	dbg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
-	printk("my_disable_dma(): reading the value previously written to the dma ctrl address is %u\n", dbg);
+	// dbg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+	// printk("my_disable_dma(): reading the value previously written to the dma ctrl address is %u\n", dbg);
 
 	// 受信バッファの解放を行う
 	reg = my_sys_readl(priv, SYS_RBUF_FLUSH_CTRL);
@@ -646,9 +646,6 @@ static int my_open(struct net_device *ndev)
 		printk("my_open(): failed to initialize DMA\n");
 		return -1;
 	}
-
-	// dmaコントローラを有効化する
-	my_enable_dma(priv, dma_ctrl);
 	
 	// irqの登録を行う
  	ret = request_irq(priv->irq0, my_isr0, IRQF_SHARED, isr0, priv);
@@ -665,6 +662,9 @@ static int my_open(struct net_device *ndev)
 	}
 	
 	printk("my_open(): successfully registered my receive handler\n");
+
+	// dmaコントローラを有効化する
+	// my_enable_dma(priv, dma_ctrl);
 	
 	// phy,mac,ringなどなど割り込みを発生させるのに必要なコンポーネントを有効化する
 	my_netif_start(ndev);
