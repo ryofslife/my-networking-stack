@@ -164,11 +164,14 @@ static struct sk_buff *my_rx_refill(struct my_priv *priv, struct enet_cb *cb)
 	dma_addr_t mapping;
 
 	// skbを確保する
+	printk("my_rx_refill(): the buffer size trying to allocate is %u\n", RX_BUF_LENGTH);
 	printk("my_rx_refill(): the buffer size trying to allocate is %u\n", priv->rx_buf_len);
 	printk("my_rx_refill(): the skb alignment is %u\n", SKB_ALIGNMENT);
 	len = priv->rx_buf_len + SKB_ALIGNMENT;
 	printk("my_rx_refill(): the rx buffer length is %u\n", len);
-	skb = __netdev_alloc_skb(priv->ndev, priv->rx_buf_len + SKB_ALIGNMENT, GFP_ATOMIC);
+	// マクロが反映されていないので一時的に直接渡す
+	// skb = __netdev_alloc_skb(priv->ndev, priv->rx_buf_len + SKB_ALIGNMENT, GFP_ATOMIC);
+	skb = __netdev_alloc_skb(priv->ndev, 2048 + SKB_ALIGNMENT, GFP_ATOMIC);
 	if (!skb) {
 		printk("my_rx_refill(): the skb alignment is %u\n", NET_SKB_PAD);
 		len += NET_SKB_PAD;
@@ -342,6 +345,7 @@ static int my_init_rx_ring(struct my_priv *priv, unsigned int index, unsigned in
 	ring->rx_max_coalesced_frames = 1;
 
 	// リングのコントロールブロックにそれぞれskbを確保する
+	printk("my_init_rx_ring(): each buffer within the ring with the size of\n", priv->rx_buf_len);
 	ret = my_alloc_rx_buffers(priv, ring);
 	if (ret)
 		return ret;
@@ -848,7 +852,10 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	init_waitqueue_head(&priv->wq);
 
 	// 各リングのコントロールブロック一つ分のサイズ
+	printk("my_platform_device_probe(): rx buff len of %u\n", RX_BUF_LENGTH);
+	printk("my_platform_device_probe(): about to assign rx buff len: %u\n", priv->rx_buf_len);
 	priv->rx_buf_len = RX_BUF_LENGTH;
+	printk("my_platform_device_probe(): assigned rx buff len: %u\n", priv->rx_buf_len);
 	
 	// NICの初期化を行う
 	oops = bcmgenet_mii_init(ndev);
