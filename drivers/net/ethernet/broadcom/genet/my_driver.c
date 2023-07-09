@@ -692,15 +692,27 @@ static int my_open(struct net_device *ndev)
 	char *isr0 = "warikomi0";
 	char *isr1 = "warikomi1";
 
+	// debugging
+	printk("my_platform_device_probe(): debugging the size of %u\n", priv->rx_buf_len);
+
 	// macをリセットする
 	my_umac_reset(priv);
 
+	// debugging
+	printk("my_platform_device_probe(): debugging the size of %u\n", priv->rx_buf_len);
+
 	// macの初期化から有効化？まで行う
 	init_umac(priv);
+
+	// debugging
+	printk("my_platform_device_probe(): debugging the size of %u\n", priv->rx_buf_len);
 	
 	// dmaコントローラを無効化する
 	dma_ctrl = my_disable_dma(priv);
 	printk("my_open(): dma control register has bit state of %lu\n", dma_ctrl);
+
+	// debugging
+	printk("my_platform_device_probe(): debugging the size of %u\n", priv->rx_buf_len);
 
 	// dmaコントローラを初期化する
 	ret = my_init_dma(priv);

@@ -580,7 +580,6 @@ struct sk_buff *__netdev_alloc_skb(struct net_device *dev, unsigned int len,
 	    len > SKB_WITH_OVERHEAD(PAGE_SIZE) ||
 	    (gfp_mask & (__GFP_DIRECT_RECLAIM | GFP_DMA))) {
 		skb = __alloc_skb(len, gfp_mask, SKB_ALLOC_RX, NUMA_NO_NODE);
-		printk("__netdev_alloc_skb(): allcating memory for skb which was either too big or small\n");
 		if (!skb) {
 			printk("__netdev_alloc_skb(): failed to allcate memory for skb which was either too big or small\n");
 			goto skb_fail;
@@ -623,12 +622,10 @@ struct sk_buff *__netdev_alloc_skb(struct net_device *dev, unsigned int len,
 	skb->head_frag = 1;
 
 skb_success:
-	printk("__netdev_alloc_skb(): succeeded\n");
 	skb_reserve(skb, NET_SKB_PAD);
 	skb->dev = dev;
 
 skb_fail:
-	printk("__netdev_alloc_skb(): failed\n");
 	return skb;
 }
 EXPORT_SYMBOL(__netdev_alloc_skb);
