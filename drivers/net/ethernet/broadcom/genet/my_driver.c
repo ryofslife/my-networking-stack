@@ -345,7 +345,7 @@ static int my_init_rx_ring(struct my_priv *priv, unsigned int index, unsigned in
 	ring->rx_max_coalesced_frames = 1;
 
 	// リングのコントロールブロックにそれぞれskbを確保する
-	printk("my_init_rx_ring(): each buffer within the ring with the size of\n", priv->rx_buf_len);
+	printk("my_init_rx_ring(): each buffer within the ring with the size of %u\n", priv->rx_buf_len);
 	ret = my_alloc_rx_buffers(priv, ring);
 	if (ret)
 		return ret;
