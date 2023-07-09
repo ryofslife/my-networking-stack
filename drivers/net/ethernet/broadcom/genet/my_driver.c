@@ -160,7 +160,7 @@ static struct sk_buff *my_rx_refill(struct my_priv *priv, struct enet_cb *cb)
 	struct device *kdev = &priv->pdev->dev;
 	struct sk_buff *skb;
 	struct sk_buff *rx_skb;
-	unsigned int len
+	unsigned int len;
 	dma_addr_t mapping;
 
 	// skbを確保する
