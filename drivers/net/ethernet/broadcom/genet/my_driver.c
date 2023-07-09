@@ -160,7 +160,6 @@ static struct sk_buff *my_rx_refill(struct my_priv *priv, struct enet_cb *cb)
 	struct device *kdev = &priv->pdev->dev;
 	struct sk_buff *skb;
 	struct sk_buff *rx_skb;
-	unsigned int len;
 	dma_addr_t mapping;
 
 	// skbを確保する
@@ -296,15 +295,14 @@ static void init_umac(struct my_priv *priv)
 // 受信dma用リングの初期化
 static int my_init_rx_ring(struct my_priv *priv, unsigned int index, unsigned int size, unsigned int start_ptr, unsigned int end_ptr)
 {
-
-	// debugging
-	printk("my_init_rx_ring(): debugging 1 the size of %u\n", priv->rx_buf_len);
-
     // リングの構造体の配列がヘッダファイルで宣言されている
     // リングそれぞれを初期化していく
 	struct my_rx_ring *ring = &priv->rx_rings[index];
 	u32 words_per_bd = WORDS_PER_BD(priv);
 	int ret;
+
+	// debugging
+	printk("my_init_rx_ring(): debugging 1 the size of %u\n", priv->rx_buf_len);
 
 	// debugging
 	printk("my_init_rx_ring(): debugging 2 the size of %u\n", priv->rx_buf_len);
