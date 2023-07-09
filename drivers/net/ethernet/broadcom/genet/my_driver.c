@@ -164,18 +164,10 @@ static struct sk_buff *my_rx_refill(struct my_priv *priv, struct enet_cb *cb)
 	dma_addr_t mapping;
 
 	// skbを確保する
-	printk("my_rx_refill(): the buffer size trying to allocate is %u\n", RX_BUF_LENGTH);
-	printk("my_rx_refill(): the buffer size trying to allocate is %u\n", priv->rx_buf_len);
-	printk("my_rx_refill(): the skb alignment is %u\n", SKB_ALIGNMENT);
-	len = priv->rx_buf_len + SKB_ALIGNMENT;
-	printk("my_rx_refill(): the rx buffer length is %u\n", len);
 	// マクロが反映されていないので一時的に直接渡す
 	// skb = __netdev_alloc_skb(priv->ndev, priv->rx_buf_len + SKB_ALIGNMENT, GFP_ATOMIC);
 	skb = __netdev_alloc_skb(priv->ndev, 2048 + SKB_ALIGNMENT, GFP_ATOMIC);
 	if (!skb) {
-		printk("my_rx_refill(): the skb alignment is %u\n", NET_SKB_PAD);
-		len += NET_SKB_PAD;
-		printk("my_rx_refill(): the buffer size tryinh to allocate is %u\n", len);
 		printk(KERN_INFO "my_rx_refill(): could not allocated skb for the control block\n");
 		return NULL;
 	}
@@ -304,47 +296,79 @@ static void init_umac(struct my_priv *priv)
 // 受信dma用リングの初期化
 static int my_init_rx_ring(struct my_priv *priv, unsigned int index, unsigned int size, unsigned int start_ptr, unsigned int end_ptr)
 {
+
+	// debugging
+	printk("my_init_rx_ring(): debugging 1 the size of %u\n", priv->rx_buf_len);
+
     // リングの構造体の配列がヘッダファイルで宣言されている
     // リングそれぞれを初期化していく
 	struct my_rx_ring *ring = &priv->rx_rings[index];
 	u32 words_per_bd = WORDS_PER_BD(priv);
 	int ret;
 
+	// debugging
+	printk("my_init_rx_ring(): debugging 2 the size of %u\n", priv->rx_buf_len);
+
     // privのリングにさらにprivを持たせている
 	ring->priv = priv;
 
+	// debugging
+	printk("my_init_rx_ring(): debugging 3 the size of %u\n", priv->rx_buf_len);
+
     // 何番目のリングなのかを指定する
 	ring->index = index;
+
+	// debugging
+	printk("my_init_rx_ring(): debugging 4 the size of %u\n", priv->rx_buf_len);
 
     // リングごとに割り込みの有効化を行うハンドラ関数を指定している、これが割り込みを発生させている、たぶん
     // このハンドラ関数が呼ばれるタイミングを押さえておく必要がある
 	if (index == DESC_INDEX) {
 		ring->int_enable = my_rx_ring16_int_enable;
 		ring->int_disable = my_rx_ring16_int_disable;
+		// debugging
+		printk("my_init_rx_ring(): debugging 5 the size of %u\n", priv->rx_buf_len);
 	} else {
 		ring->int_enable = my_rx_ring_int_enable;
 		ring->int_disable = my_rx_ring_int_disable;
+		// debugging
+		printk("my_init_rx_ring(): debugging 6 the size of %u\n", priv->rx_buf_len);
 	}
 
 	// 対象リングの番地、priv->rx_cbsはリング共通
 	ring->cbs = priv->rx_cbs + start_ptr;
+	// debugging
+	printk("my_init_rx_ring(): debugging 7 the size of %u\n", priv->rx_buf_len);
 	// 対象リングにおけるバッファディスクリプタ(bd)の数
 	ring->size = size;
+	// debugging
+	printk("my_init_rx_ring(): debugging 8 the size of %u\n", priv->rx_buf_len);
 	// これはよくわからん
 	ring->c_index = 0;
+	// debugging
+	printk("my_init_rx_ring(): debugging 9 the size of %u\n", priv->rx_buf_len);
 	// start_ptrは　i番目(ring) × 一つのringが持つdbの数　として定義している
 	// 0番目のringからの距離
 	ring->read_ptr = start_ptr;
+	// debugging
+	printk("my_init_rx_ring(): debugging 10 the size of %u\n", priv->rx_buf_len);
 	ring->cb_ptr = start_ptr;
+	// debugging
+	printk("my_init_rx_ring(): debugging 11 the size of %u\n", priv->rx_buf_len);
 	// end_ptrは　(i + 1)番目 × 一つのringが持つdbの数　として定義している
 	// 対象リングのお尻の番地
 	ring->end_ptr = end_ptr - 1;
+	// debugging
+	printk("my_init_rx_ring(): debugging 12 the size of %u\n", priv->rx_buf_len);
 	// coalescing engine周りのパラメータを定義する、ここをいじってみるのは面白いかも
 	// bcmだとopen内で定義している
 	ring->rx_coalesce_usecs = 50;
+	// debugging
+	printk("my_init_rx_ring(): debugging 13 the size of %u\n", priv->rx_buf_len);
 	ring->rx_max_coalesced_frames = 1;
 
 	// リングのコントロールブロックにそれぞれskbを確保する
+	// 上の一連のringのパラメータを投入する過程でoverflowしてそう
 	printk("my_init_rx_ring(): each buffer within the ring with the size of %u\n", priv->rx_buf_len);
 	ret = my_alloc_rx_buffers(priv, ring);
 	if (ret)
@@ -472,6 +496,9 @@ static int my_init_dma(struct my_priv *priv)
 	// コントロールブロック単体の構造体
 	struct enet_cb *cb;
 
+	// debugging
+	printk("my_init_dma(): debugging the size of %u\n", priv->rx_buf_len);
+
 	/* Initialize common Rx ring structures */
 	// リングバッファのコントロールブロックの個数、256個用意する
 	priv->num_rx_bds = TOTAL_DESC;
@@ -483,11 +510,17 @@ static int my_init_dma(struct my_priv *priv)
 		return -ENOMEM;
 	}
 
+	// debugging
+	printk("my_init_dma(): debugging the size of %u\n", priv->rx_buf_len);
+
 	// それぞれのコントロールブロックの番地を指定する
 	for (i = 0; i < priv->num_rx_bds; i++) {
 		cb = priv->rx_cbs + i;
 		cb->bd_addr = priv->rx_bds + i * DMA_DESC_SIZE;
 	}
+
+	// debugging
+	printk("my_init_dma(): debugging the size of %u\n", priv->rx_buf_len);
 
 	/* Init rDma */
 	// 受信dmaレジスタブロックのDMA_SCB_BURST_SIZEレジスタに書き込む
@@ -852,8 +885,6 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	init_waitqueue_head(&priv->wq);
 
 	// 各リングのコントロールブロック一つ分のサイズ
-	printk("my_platform_device_probe(): rx buff len of %u\n", RX_BUF_LENGTH);
-	printk("my_platform_device_probe(): about to assign rx buff len: %u\n", priv->rx_buf_len);
 	priv->rx_buf_len = RX_BUF_LENGTH;
 	printk("my_platform_device_probe(): assigned rx buff len: %u\n", priv->rx_buf_len);
 	
@@ -888,6 +919,9 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	// 一連のprobeを完了
 	printk(KERN_INFO "my_platform_device_probe(): successfully registered ndev\n");
 	printk(KERN_INFO "my_platform_device_probe(): probing completed\n");
+
+	// debugging
+	printk("my_platform_device_probe(): debugging the size of %u\n", priv->rx_buf_len);
 	
 	return oops;
 	
