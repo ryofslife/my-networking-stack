@@ -694,6 +694,7 @@ static int my_open(struct net_device *ndev)
 
 	// debugging
 	printk("my_platform_device_probe(): debugging the size of %u\n", priv->rx_buf_len);
+	printk("my_platform_device_probe(): the number of rx queue is %u\n", priv->hw_params->rx_queues);
 
 	// macをリセットする
 	my_umac_reset(priv);
@@ -809,7 +810,9 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	printk("my_platform_device_probe(): the device being probed is %d\n", *pdev->name);
 	
 	// single queueで仮想デバイスをprovisionする
-	ndev = alloc_etherdev_mqs(sizeof(priv), GENET_MAX_MQ_CNT + 1, GENET_MAX_MQ_CNT + 1);
+	// 以下二つ何が違うのか、調べる(todo)
+	// ndev = alloc_etherdev_mqs(sizeof(priv), GENET_MAX_MQ_CNT + 1, GENET_MAX_MQ_CNT + 1);
+	ndev = alloc_etherdev_mqs(sizeof(*priv), GENET_MAX_MQ_CNT + 1, GENET_MAX_MQ_CNT + 1);
 	if (ndev)
 	{	
 		printk("my_platform_device_probe(): successfully allocated net_device\n");
