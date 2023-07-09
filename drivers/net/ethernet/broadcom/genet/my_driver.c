@@ -160,11 +160,19 @@ static struct sk_buff *my_rx_refill(struct my_priv *priv, struct enet_cb *cb)
 	struct device *kdev = &priv->pdev->dev;
 	struct sk_buff *skb;
 	struct sk_buff *rx_skb;
+	unsigned int len
 	dma_addr_t mapping;
 
 	// skbを確保する
+	printk("my_rx_refill(): the buffer size trying to allocate is %u\n", priv->rx_buf_len);
+	printk("my_rx_refill(): the skb alignment is %u\n", SKB_ALIGNMENT);
+	len = priv->rx_buf_len + SKB_ALIGNMENT;
+	printk("my_rx_refill(): the rx buffer length is %u\n", len);
 	skb = __netdev_alloc_skb(priv->ndev, priv->rx_buf_len + SKB_ALIGNMENT, GFP_ATOMIC);
 	if (!skb) {
+		printk("my_rx_refill(): the skb alignment is %u\n", NET_SKB_PAD);
+		len += NET_SKB_PAD;
+		printk("my_rx_refill(): the buffer size tryinh to allocate is %u\n", len);
 		printk(KERN_INFO "my_rx_refill(): could not allocated skb for the control block\n");
 		return NULL;
 	}
@@ -197,6 +205,8 @@ static int my_alloc_rx_buffers(struct my_priv *priv, struct my_rx_ring *ring)
 	struct sk_buff *skb;
 	int i;
 
+	printk("my_alloc_rx_buffers(): allocating bffuer for ring %u\n", ring->index);
+	printk("my_alloc_rx_buffers(): there are %u buffer descripters\n", ring->size);
 	for (i = 0; i < ring->size; i++) {
 		cb = ring->cbs + i;
 		skb = my_rx_refill(priv, cb);
