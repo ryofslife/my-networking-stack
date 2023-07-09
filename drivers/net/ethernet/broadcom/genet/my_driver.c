@@ -164,29 +164,41 @@ static struct sk_buff *my_rx_refill(struct my_priv *priv, struct enet_cb *cb)
 
 	// skbを確保する
 	// マクロが反映されていないので一時的に直接渡す
-	// skb = __netdev_alloc_skb(priv->ndev, priv->rx_buf_len + SKB_ALIGNMENT, GFP_ATOMIC);
-	skb = __netdev_alloc_skb(priv->ndev, 2048 + SKB_ALIGNMENT, GFP_ATOMIC);
+	printk(KERN_INFO "my_rx_refill(debug 1): %u\n", priv->rx_buf_len);
+	skb = __netdev_alloc_skb(priv->ndev, priv->rx_buf_len + SKB_ALIGNMENT, GFP_ATOMIC);
+	// skb = __netdev_alloc_skb(priv->ndev, 2048 + SKB_ALIGNMENT, GFP_ATOMIC);
 	if (!skb) {
 		printk(KERN_INFO "my_rx_refill(): could not allocated skb for the control block\n");
 		return NULL;
+	} else {
+		printk(KERN_INFO "my_rx_refill(): allocated skb for the control block\n");
 	}
 
 	// 確保したskbのアドレスは論理アドレスである、そのままではdmaコントローラは扱えないのでdmableなアドレスに変換する
+	printk(KERN_INFO "my_rx_refill(debug 2): %u\n", priv->rx_buf_len);
 	mapping = dma_map_single(kdev, skb->data, priv->rx_buf_len, DMA_FROM_DEVICE);
 	if (dma_mapping_error(kdev, mapping)) {
 		dev_kfree_skb_any(skb);
 		printk(KERN_INFO "my_rx_refill(): could not map the skb to dma address space\n");
 		return NULL;
+	} else {
+		printk(KERN_INFO "my_rx_refill(): mapped the skb to dma address space\n");
 	}
 
 	// 現在cbに割り当てられているskbをunmapする、新たに確保したskbを割り当てるため
+	printk(KERN_INFO "my_rx_refill(): debug\n");
 	rx_skb = my_free_rx_cb(kdev, cb);
 
 	// 新たに確保したskbをcbに割り当てる
+	printk(KERN_INFO "my_rx_refill(): debug 1\n");
 	cb->skb = skb;
+	printk(KERN_INFO "my_rx_refill(): debug 2\n");
 	dma_unmap_addr_set(cb, dma_addr, mapping);
+	printk(KERN_INFO "my_rx_refill(): debug 3\n");
 	dma_unmap_len_set(cb, dma_len, priv->rx_buf_len);
+	printk(KERN_INFO "my_rx_refill(): debug 4\n");
 	dmadesc_set_addr(priv, cb->bd_addr, mapping);
+	printk(KERN_INFO "my_rx_refill(): debug 5\n");
 
 	/* Return the current Rx skb to caller */
 	return rx_skb;
@@ -203,11 +215,11 @@ static int my_alloc_rx_buffers(struct my_priv *priv, struct my_rx_ring *ring)
 	printk("my_alloc_rx_buffers(): there are %u buffer descripters\n", ring->size);
 	for (i = 0; i < ring->size; i++) {
 		cb = ring->cbs + i;
-		// skb = my_rx_refill(priv, cb);
-		// if (skb)
-		// 	dev_consume_skb_any(skb);
-		// if (!cb->skb)
-		// 	return -ENOMEM;
+		skb = my_rx_refill(priv, cb);
+		if (skb)
+			dev_consume_skb_any(skb);
+		if (!cb->skb)
+			return -ENOMEM;
 	}
 
 	return 0;
