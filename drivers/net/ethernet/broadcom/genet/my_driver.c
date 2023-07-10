@@ -152,6 +152,8 @@ static void my_free_rx_buffers(struct my_priv *priv)
 static inline void dmadesc_set_addr(struct my_priv *priv, void __iomem *d, dma_addr_t addr)
 {
 	my_writel(lower_32_bits(addr), d + DMA_DESC_ADDRESS_LO);
+	// 物理アドレス上位32bis、GENETv4+
+	my_writel(upper_32_bits(addr), d + DMA_DESC_ADDRESS_HI);
 }
 
 // 渡されたコントロールブロック用にskbを確保して割り当てる
@@ -477,6 +479,8 @@ static int my_init_dma(struct my_priv *priv)
 	struct enet_cb *cb;
 
 	/* Initialize common Rx ring structures */
+	// 受信バッファディスクリプタの番地
+	priv->rx_bds = priv->base + priv->hw_params->rdma_offset;
 	// リングバッファのコントロールブロックの個数、256個用意する
 	priv->num_rx_bds = TOTAL_DESC;
 	// num_rx_bds個分のバッファコントロールブロック(enet_cb)の配列を確保する
