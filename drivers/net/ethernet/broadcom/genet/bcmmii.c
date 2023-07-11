@@ -193,26 +193,27 @@ int bcmgenet_mii_config(struct net_device *dev, bool init)
 		printk("bcmgenet_mii_config(): phy_interface is PHY_INTERFACE_MODE_INTERNAL\n");
 		phy_name = "internal PHY";
 		fallthrough;
-	case PHY_INTERFACE_MODE_MOCA:
-		/* Irrespective of the actually configured PHY speed (100 or
-		 * 1000) GENETv4 only has an internal GPHY so we will just end
-		 * up masking the Gigabit features from what we support, not
-		 * switching to the EPHY
-		 */
-		printk("bcmgenet_mii_config(): phy_interface is PHY_INTERFACE_MODE_MOCA\n");
-		if (GENET_IS_V4(priv))
-			port_ctrl = PORT_MODE_INT_GPHY;
-		else
-			port_ctrl = PORT_MODE_INT_EPHY;
+	// さすがにこれはないやろ、たぶん
+	// bcmgenet_moca_phy_setup対応しないでコメントアウトする
+	// case PHY_INTERFACE_MODE_MOCA:
+	// 	/* Irrespective of the actually configured PHY speed (100 or
+	// 	 * 1000) GENETv4 only has an internal GPHY so we will just end
+	// 	 * up masking the Gigabit features from what we support, not
+	// 	 * switching to the EPHY
+	// 	 */
+	// 	printk("bcmgenet_mii_config(): phy_interface is PHY_INTERFACE_MODE_MOCA\n");
+	// 	if (GENET_IS_V4(priv))
+	// 		port_ctrl = PORT_MODE_INT_GPHY;
+	// 	else
+	// 		port_ctrl = PORT_MODE_INT_EPHY;
 
-		if (!phy_name) {
-			phy_name = "MoCA";
-			if (!GENET_IS_V5(priv))
-				port_ctrl |= LED_ACT_SOURCE_MAC;
-			bcmgenet_moca_phy_setup(priv);
-		}
-		break;
-
+	// 	if (!phy_name) {
+	// 		phy_name = "MoCA";
+	// 		if (!GENET_IS_V5(priv))
+	// 			port_ctrl |= LED_ACT_SOURCE_MAC;
+	// 		bcmgenet_moca_phy_setup(priv);
+	// 	}
+	// 	break;
 	case PHY_INTERFACE_MODE_MII:
 		printk("bcmgenet_mii_config(): phy_interface is PHY_INTERFACE_MODE_MII\n");
 		phy_name = "external MII";

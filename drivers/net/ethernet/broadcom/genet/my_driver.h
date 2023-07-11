@@ -129,6 +129,10 @@ struct my_priv {
 	wait_queue_head_t wq;
 	u32 dma_max_burst_length;
 	int ext_phy;
+	unsigned autoneg_pause:1;	
+	unsigned tx_pause:1;
+	unsigned rx_pause:1;
+	u16 gphy_rev;
 	
 };
 

@@ -703,7 +703,7 @@ static int my_open(struct net_device *ndev)
 	// phyデバイスをセットアップする
 	ret = bcmgenet_mii_probe(ndev);
 	if (ret) {
-		netdev_err(dev, "failed to connect to PHY\n");
+		netdev_err(ndev, "failed to connect to PHY\n");
 		return -1;
 	}
 	
