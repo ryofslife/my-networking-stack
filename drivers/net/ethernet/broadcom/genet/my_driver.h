@@ -128,6 +128,7 @@ struct my_priv {
 	struct platform_device *mii_pdev;
 	wait_queue_head_t wq;
 	u32 dma_max_burst_length;
+	int ext_phy;
 	
 };
 
@@ -248,4 +249,21 @@ static inline void my_rdma_ring_writel(struct my_priv *priv, unsigned int ring, 
 		__raw_writel(val, priv->base + GENET_RDMA_REG_OFF + (DMA_RING_SIZE * ring) + my_dma_ring_regs[reg_type]);	
 	else								
 		writel_relaxed(val, priv->base + GENET_RDMA_REG_OFF + (DMA_RING_SIZE * ring) + my_dma_ring_regs[reg_type]);		
+}
+
+// extレジスタブロックからの読み取りを行う
+static inline u32 my_ext_readl(struct my_priv *priv, u32 off)
+{	
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) 
+		return __raw_readl(priv->base + GENET_EXT_OFF + off);		
+	else								
+		return readl_relaxed(priv->base + GENET_EXT_OFF + off);	
+}
+// extレジスタブロックへの書き込みを行う
+static inline void my_ext_writel(struct my_priv *priv, u32 val, u32 off)
+{									
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
+		__raw_writel(val, priv->base + GENET_EXT_OFF + off);	
+	else								
+		writel_relaxed(val, priv->base + GENET_EXT_OFF + off);		
 }

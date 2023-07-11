@@ -166,14 +166,11 @@ static struct sk_buff *my_rx_refill(struct my_priv *priv, struct enet_cb *cb)
 
 	// skbを確保する
 	// マクロが反映されていないので一時的に直接渡す
-	printk(KERN_INFO "my_rx_refill(debug 1): %u\n", priv->rx_buf_len);
 	skb = __netdev_alloc_skb(priv->ndev, priv->rx_buf_len + SKB_ALIGNMENT, GFP_ATOMIC);
 	// skb = __netdev_alloc_skb(priv->ndev, 2048 + SKB_ALIGNMENT, GFP_ATOMIC);
 	if (!skb) {
 		printk(KERN_INFO "my_rx_refill(): could not allocated skb for the control block\n");
 		return NULL;
-	} else {
-		printk(KERN_INFO "my_rx_refill(): allocated skb for the control block\n");
 	}
 
 	// 確保したskbのアドレスは論理アドレスである、そのままではdmaコントローラは扱えないのでdmableなアドレスに変換する
@@ -183,24 +180,16 @@ static struct sk_buff *my_rx_refill(struct my_priv *priv, struct enet_cb *cb)
 		dev_kfree_skb_any(skb);
 		printk(KERN_INFO "my_rx_refill(): could not map the skb to dma address space\n");
 		return NULL;
-	} else {
-		printk(KERN_INFO "my_rx_refill(): mapped the skb to dma address space\n");
 	}
 
 	// 現在cbに割り当てられているskbをunmapする、新たに確保したskbを割り当てるため
-	printk(KERN_INFO "my_rx_refill(): debug\n");
 	rx_skb = my_free_rx_cb(kdev, cb);
 
 	// 新たに確保したskbをcbに割り当てる
-	printk(KERN_INFO "my_rx_refill(): debug 1\n");
 	cb->skb = skb;
-	printk(KERN_INFO "my_rx_refill(): debug 2\n");
 	dma_unmap_addr_set(cb, dma_addr, mapping);
-	printk(KERN_INFO "my_rx_refill(): debug 3\n");
 	dma_unmap_len_set(cb, dma_len, priv->rx_buf_len);
-	printk(KERN_INFO "my_rx_refill(): debug 4\n");
 	dmadesc_set_addr(priv, cb->bd_addr, mapping);
-	printk(KERN_INFO "my_rx_refill(): debug 5\n");
 
 	/* Return the current Rx skb to caller */
 	return rx_skb;
@@ -548,14 +537,18 @@ static irqreturn_t my_isr0(int irq, void *dev_id)
 	unsigned int status;
 	
 	// 割り込みがあった
-	printk("my_isr0(): Hi there, there was an interrupt\n");
-	printk("my_isr0(): interrupt with an irq of %d\n", irq);
-	printk("my_isr0(): device with an irq of %d\n", priv->irq0);
+	printk("my_isr0(): Hi there, there was an regular interrupt\n");
 
-	// 割り込みbitsを無効化する
-	// しないと延々と割り込みが入り続ける現象が発生する、している
+	// 割り込みbitsの状態を確認する
 	status = my_intrl2_0_readl(priv, INTRL2_CPU_STAT) & ~my_intrl2_0_readl(priv, INTRL2_CPU_MASK_STATUS);
+	// 割り込み状態からの解放、しないと延々と割り込みが入り続ける現象が発生する、している
 	my_intrl2_0_writel(priv, status, INTRL2_CPU_CLEAR);
+	// dmaが完了しているかを確認する
+	if (status & UMAC_IRQ_RXDMA_DONE) {
+		printk("my_isr0(): RX DMA completed. Packets are waiting!\n");
+	} else {
+		printk("my_isr0(): RX DMA not yet completed...\n");
+	}
 
 	return IRQ_HANDLED;
 }
@@ -568,13 +561,17 @@ static irqreturn_t my_isr1(int irq, void *dev_id)
 	
 	// 割り込みがあった
 	printk("my_isr1(): Hi there, there was an interrupt\n");
-	printk("my_isr1(): interrupt with an irq of %d\n", irq);
-	printk("my_isr1(): device with an irq of %d\n", priv->irq0);
 	
-	// 割り込みbitsを無効化する
-	// しないと延々と割り込みが入り続ける現象が発生する、している
+	// 割り込みbitsの状態を確認する
 	status = my_intrl2_1_readl(priv, INTRL2_CPU_STAT) & ~my_intrl2_1_readl(priv, INTRL2_CPU_MASK_STATUS);
+	// 割り込み状態からの解放
 	my_intrl2_1_writel(priv, status, INTRL2_CPU_CLEAR);
+	// dmaが完了しているかを確認する
+	if (status & UMAC_IRQ_RXDMA_DONE) {
+		printk("my_isr1(): RX DMA completed. Packets are waiting!\n");
+	} else {
+		printk("my_isr1(): RX DMA not yet completed...\n");
+	}
 
 	return IRQ_HANDLED;
 }
@@ -698,11 +695,17 @@ static int my_open(struct net_device *ndev)
 		printk("my_open(): failed to register my priority receive handler\n");
 		return -1;
 	}
-	
 	printk("my_open(): successfully registered my receive handler\n");
 
 	// dmaコントローラを有効化する
 	my_enable_dma(priv, dma_ctrl);
+
+	// phyデバイスをセットアップする
+	ret = bcmgenet_mii_probe(ndev);
+	if (ret) {
+		netdev_err(dev, "failed to connect to PHY\n");
+		return -1;
+	}
 	
 	// phy,mac,ringなどなど割り込みを発生させるのに必要なコンポーネントを有効化する
 	my_netif_start(ndev);

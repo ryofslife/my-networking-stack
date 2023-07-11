@@ -28,11 +28,13 @@
 
 static void bcmgenet_mac_config(struct net_device *dev)
 {
-	struct bcmgenet_priv *priv = netdev_priv(dev);
+	struct my_priv *priv = netdev_priv(dev);
 	struct phy_device *phydev = dev->phydev;
 	u32 reg, cmd_bits = 0;
 
 	/* speed */
+	// phyのスピードを取得して、macをconfigするため
+	// cmd_bitsはumacレジスタに書き込む
 	if (phydev->speed == SPEED_1000)
 		cmd_bits = CMD_SPEED_1000;
 	else if (phydev->speed == SPEED_100)
@@ -42,6 +44,7 @@ static void bcmgenet_mac_config(struct net_device *dev)
 	cmd_bits <<= CMD_SPEED_SHIFT;
 
 	/* duplex */
+	// 二重通信に関してconfigするためのbitsを用意している、たぶん
 	if (phydev->duplex != DUPLEX_FULL) {
 		cmd_bits |= CMD_HD_EN |
 			CMD_RX_PAUSE_IGNORE | CMD_TX_PAUSE_IGNORE;
@@ -72,23 +75,23 @@ static void bcmgenet_mac_config(struct net_device *dev)
 	 * transmit -- 25MHz(100Mbps) or 125MHz(1Gbps).
 	 * Receive clock is provided by the PHY.
 	 */
-	reg = bcmgenet_ext_readl(priv, EXT_RGMII_OOB_CTRL);
+	reg = my_ext_readl(priv, EXT_RGMII_OOB_CTRL);
 	reg &= ~OOB_DISABLE;
 	reg |= RGMII_LINK;
-	bcmgenet_ext_writel(priv, reg, EXT_RGMII_OOB_CTRL);
+	my_ext_writel(priv, reg, EXT_RGMII_OOB_CTRL);
 
-	reg = bcmgenet_umac_readl(priv, UMAC_CMD);
+	reg = my_umac_readl(priv, UMAC_CMD);
 	reg &= ~((CMD_SPEED_MASK << CMD_SPEED_SHIFT) |
 		       CMD_HD_EN |
 		       CMD_RX_PAUSE_IGNORE | CMD_TX_PAUSE_IGNORE);
 	reg |= cmd_bits;
 	if (reg & CMD_SW_RESET) {
 		reg &= ~CMD_SW_RESET;
-		bcmgenet_umac_writel(priv, reg, UMAC_CMD);
+		my_umac_writel(priv, reg, UMAC_CMD);
 		udelay(2);
 		reg |= CMD_TX_EN | CMD_RX_EN;
 	}
-	bcmgenet_umac_writel(priv, reg, UMAC_CMD);
+	my_umac_writel(priv, reg, UMAC_CMD);
 }
 
 /* setup netdev link state when PHY link status change and
@@ -177,7 +180,7 @@ static void bcmgenet_moca_phy_setup(struct bcmgenet_priv *priv)
 
 int bcmgenet_mii_config(struct net_device *dev, bool init)
 {
-	struct bcmgenet_priv *priv = netdev_priv(dev);
+	struct my_priv *priv = netdev_priv(dev);
 	struct phy_device *phydev = dev->phydev;
 	struct device *kdev = &priv->pdev->dev;
 	const char *phy_name = NULL;
@@ -187,6 +190,7 @@ int bcmgenet_mii_config(struct net_device *dev, bool init)
 
 	switch (priv->phy_interface) {
 	case PHY_INTERFACE_MODE_INTERNAL:
+		printk("bcmgenet_mii_config(): phy_interface is PHY_INTERFACE_MODE_INTERNAL\n");
 		phy_name = "internal PHY";
 		fallthrough;
 	case PHY_INTERFACE_MODE_MOCA:
@@ -195,6 +199,7 @@ int bcmgenet_mii_config(struct net_device *dev, bool init)
 		 * up masking the Gigabit features from what we support, not
 		 * switching to the EPHY
 		 */
+		printk("bcmgenet_mii_config(): phy_interface is PHY_INTERFACE_MODE_MOCA\n");
 		if (GENET_IS_V4(priv))
 			port_ctrl = PORT_MODE_INT_GPHY;
 		else
@@ -209,12 +214,14 @@ int bcmgenet_mii_config(struct net_device *dev, bool init)
 		break;
 
 	case PHY_INTERFACE_MODE_MII:
+		printk("bcmgenet_mii_config(): phy_interface is PHY_INTERFACE_MODE_MII\n");
 		phy_name = "external MII";
 		phy_set_max_speed(phydev, SPEED_100);
 		port_ctrl = PORT_MODE_EXT_EPHY;
 		break;
 
 	case PHY_INTERFACE_MODE_REVMII:
+		printk("bcmgenet_mii_config(): phy_interface is PHY_INTERFACE_MODE_REVMII\n");
 		phy_name = "external RvMII";
 		/* of_mdiobus_register took care of reading the 'max-speed'
 		 * PHY property for us, effectively limiting the PHY supported
@@ -234,6 +241,7 @@ int bcmgenet_mii_config(struct net_device *dev, bool init)
 		 *
 		 * ID is implicitly disabled for 100Mbps (RG)MII operation.
 		 */
+		printk("bcmgenet_mii_config(): phy_interface is PHY_INTERFACE_MODE_RGMII\n");
 		phy_name = "external RGMII (no delay)";
 		id_mode_dis = BIT(16);
 		port_ctrl = PORT_MODE_EXT_GPHY;
@@ -241,20 +249,24 @@ int bcmgenet_mii_config(struct net_device *dev, bool init)
 
 	case PHY_INTERFACE_MODE_RGMII_TXID:
 		/* RGMII_TXID:	Add 2ns delay on TXC (90 degree shift) */
+		printk("bcmgenet_mii_config(): phy_interface is PHY_INTERFACE_MODE_RGMII_TXID\n");
 		phy_name = "external RGMII (TX delay)";
 		port_ctrl = PORT_MODE_EXT_GPHY;
 		break;
 
+	// ラズパイのNICはこれのはず、たぶん
 	case PHY_INTERFACE_MODE_RGMII_RXID:
+		printk("bcmgenet_mii_config(): phy_interface is PHY_INTERFACE_MODE_RGMII_RXID\n");
 		phy_name = "external RGMII (RX delay)";
 		port_ctrl = PORT_MODE_EXT_GPHY;
 		break;
 	default:
+		printk("bcmgenet_mii_config(): phy_interface is default\n");
 		dev_err(kdev, "unknown phy mode: %d\n", priv->phy_interface);
 		return -EINVAL;
 	}
 
-	bcmgenet_sys_writel(priv, port_ctrl, SYS_PORT_CTRL);
+	my_sys_writel(priv, port_ctrl, SYS_PORT_CTRL);
 
 	priv->ext_phy = !priv->internal_phy &&
 			(priv->phy_interface != PHY_INTERFACE_MODE_MOCA);
@@ -263,14 +275,14 @@ int bcmgenet_mii_config(struct net_device *dev, bool init)
 	 * block for the interface to work
 	 */
 	if (priv->ext_phy) {
-		reg = bcmgenet_ext_readl(priv, EXT_RGMII_OOB_CTRL);
+		reg = my_ext_readl(priv, EXT_RGMII_OOB_CTRL);
 		reg &= ~ID_MODE_DIS;
 		reg |= id_mode_dis;
 		if (GENET_IS_V1(priv) || GENET_IS_V2(priv) || GENET_IS_V3(priv))
 			reg |= RGMII_MODE_EN_V123;
 		else
 			reg |= RGMII_MODE_EN;
-		bcmgenet_ext_writel(priv, reg, EXT_RGMII_OOB_CTRL);
+		my_ext_writel(priv, reg, EXT_RGMII_OOB_CTRL);
 	}
 
 	if (init)
@@ -281,7 +293,7 @@ int bcmgenet_mii_config(struct net_device *dev, bool init)
 
 int bcmgenet_mii_probe(struct net_device *dev)
 {
-	struct bcmgenet_priv *priv = netdev_priv(dev);
+	struct my_priv *priv = netdev_priv(dev);
 	struct device *kdev = &priv->pdev->dev;
 	struct device_node *dn = kdev->of_node;
 	phy_interface_t phy_iface = priv->phy_interface;
