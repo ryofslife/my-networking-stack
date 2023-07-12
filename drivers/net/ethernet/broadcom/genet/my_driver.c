@@ -69,6 +69,7 @@ static struct my_hw_params *my_set_hw_params(struct my_hw_params *hw_params)
 	// 何のために用意する必要があるのか把握できたパラメータに関して都度追加する
 	// https://github.com/raspberrypi/linux/blob/96110e96f1a82e236afb9a248258f1ef917766e9/drivers/net/ethernet/broadcom/genet/bcmgenet.c#L3758
 	hw_params->rdma_offset = 0x2000;
+	hw_params->tdma_offset = 0x4000;
 	hw_params->words_per_bd = 3;
 	hw_params->rx_queues = 0;
 	hw_params->tx_queues = 4;
@@ -436,9 +437,10 @@ static int my_init_rx_queues(struct net_device *dev)
 //　dmaを無効化する
 static u32 my_disable_dma(struct my_priv *priv)
 {
-	enum dma_reg reg_type;
+	unsigned int i;
 	u32 reg;
 	u32 dma_ctrl;
+	// enum dma_reg reg_type;
 	// u32 dbg;
 	
 	// reg_type = DMA_CTRL;
