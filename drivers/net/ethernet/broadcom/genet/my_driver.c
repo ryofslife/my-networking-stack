@@ -71,6 +71,7 @@ static struct my_hw_params *my_set_hw_params(struct my_hw_params *hw_params)
 	hw_params->rdma_offset = 0x2000;
 	hw_params->words_per_bd = 3;
 	hw_params->rx_queues = 0;
+	hw_params->tx_queues = 4;
 	// 優先ringのコントロールブロックは0とする
 	hw_params->rx_bds_per_q = 0;
 	
@@ -114,6 +115,16 @@ static inline void my_rx_ring_int_enable(struct my_rx_ring *ring)
 static inline void my_rx_ring_int_disable(struct my_rx_ring *ring)
 {
 	my_intrl2_1_writel(ring->priv, 1 << (UMAC_IRQ1_RX_INTR_SHIFT + ring->index), INTRL2_CPU_MASK_SET);
+}
+
+// 送信リングの有効化と無効化を行う
+static inline void my_tx_ring16_int_enable(struct my_priv *priv)
+{
+	my_intrl2_0_writel(priv, UMAC_IRQ_TXDMA_DONE, INTRL2_CPU_MASK_CLEAR);
+}
+static inline void my_tx_ring16_int_disable(struct my_priv *priv)
+{
+	my_intrl2_0_writel(priv, UMAC_IRQ_TXDMA_DONE, INTRL2_CPU_MASK_SET);
 }
 
 // コントロールブロックに割り当てたリソースを解放する
@@ -414,6 +425,7 @@ static int my_init_rx_queues(struct net_device *dev)
 
 	// re有効化している
 	if (dma_enable) {
+		printk("my_init_rx_queues(): dma is enabled");
 		dma_ctrl |= DMA_EN;
 	}
 	my_rdma_writel(priv, dma_ctrl, DMA_CTRL);
@@ -429,23 +441,43 @@ static u32 my_disable_dma(struct my_priv *priv)
 	u32 dma_ctrl;
 	// u32 dbg;
 	
-	reg_type = DMA_CTRL;
+	// reg_type = DMA_CTRL;
 	
-	// 読み込み処理関数を呼び出す
-	// ベースアドレス + dma channel 2へのoffset + 受信リングバッファ分のoffset + 0x04(dmaコントローラ分のoffset)
-	// の番地のbits状態を読み込む
+	// // ベースアドレス + dma channel 2へのoffset + 受信リングバッファ分のoffset + 0x04(dmaコントローラ分のoffset)
+	// // の番地のbits状態を読み込む
+	// dma_ctrl = 1 << (DESC_INDEX + DMA_RING_BUF_EN_SHIFT) | DMA_EN;
+
+ 	// reg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+	// reg &= ~dma_ctrl;
+	// printk("my_disable_dma(): the value written to the dma ctrl address is %u\n", reg);
+
+	// // の番地にマスクしたbitsを書き込む
+	// my_writel(reg, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+
+	// // 書き込んだ値を読み込んでみる
+	// // dbg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+	// // printk("my_disable_dma(): reading the value previously written to the dma ctrl address is %u\n", dbg);
+
+	/* disable DMA */
+	// rx/tx共に無効化する
+	// 有効化するのはrxのみ
 	dma_ctrl = 1 << (DESC_INDEX + DMA_RING_BUF_EN_SHIFT) | DMA_EN;
-
- 	reg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+	for (i = 0; i < priv->hw_params->tx_queues; i++)
+		dma_ctrl |= (1 << (i + DMA_RING_BUF_EN_SHIFT));
+	reg = my_tdma_readl(priv, DMA_CTRL);
 	reg &= ~dma_ctrl;
-	printk("my_disable_dma(): the value written to the dma ctrl address is %u\n", reg);
+	my_tdma_writel(priv, reg, DMA_CTRL);
 
-	// の番地にマスクしたbitsを書き込む
-	my_writel(reg, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
+	dma_ctrl = 1 << (DESC_INDEX + DMA_RING_BUF_EN_SHIFT) | DMA_EN;
+	for (i = 0; i < priv->hw_params->rx_queues; i++)
+		dma_ctrl |= (1 << (i + DMA_RING_BUF_EN_SHIFT));
+	reg = my_rdma_readl(priv, DMA_CTRL);
+	reg &= ~dma_ctrl;
+	my_rdma_writel(priv, reg, DMA_CTRL);
 
-	// 書き込んだ値を読み込んでみる
-	// dbg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
-	// printk("my_disable_dma(): reading the value previously written to the dma ctrl address is %u\n", dbg);
+	my_umac_writel(priv, 1, UMAC_TX_FLUSH);
+	udelay(10);
+	my_umac_writel(priv, 0, UMAC_TX_FLUSH);
 
 	// 受信バッファの解放を行う
 	reg = my_sys_readl(priv, SYS_RBUF_FLUSH_CTRL);
@@ -538,28 +570,32 @@ static irqreturn_t my_isr0(int irq, void *dev_id)
 	unsigned int status;
 	
 	// 割り込みがあった
-	// printk("my_isr0(): Hi there, there was an regular interrupt\n");
+	printk("my_isr0(): Hi there, there was an regular interrupt\n");
 
 	// 割り込みbitsの状態を確認する
 	status = my_intrl2_0_readl(priv, INTRL2_CPU_STAT) & ~my_intrl2_0_readl(priv, INTRL2_CPU_MASK_STATUS);
 	// 割り込み状態からの解放、しないと延々と割り込みが入り続ける現象が発生する、している
 	my_intrl2_0_writel(priv, status, INTRL2_CPU_CLEAR);
-	// dmaが完了しているかを確認する
-	// if (status & UMAC_IRQ_RXDMA_DONE) {
-	// 	printk("my_isr0(): RX DMA completed. Packets are waiting!\n");
-	// } else {
-	// 	printk("my_isr0(): RX DMA not yet completed...\n");
-	// }
 
-	rx_ring = &priv->rx_rings[DESC_INDEX];
-	// 割り込みを一定時間無効化する
-	rx_ring->int_disable(rx_ring);
-	// delay
-	mdelay(100);
-	// atomicコンテキストで使えない
-	// msleep(1000); 
-	// 割り込みを有効化する
-	rx_ring->int_enable(rx_ring);
+	if (status & UMAC_IRQ_RXDMA_DONE) {
+
+		printk("my_isr0(): It's rx\n");
+		
+		rx_ring = &priv->rx_rings[DESC_INDEX];
+		// 割り込みを一定時間無効化する
+		rx_ring->int_disable(rx_ring);
+		// delay
+		mdelay(100);
+		// atomicコンテキストで使えない
+		// msleep(1000); 
+		// 割り込みを有効化する
+		rx_ring->int_enable(rx_ring);
+	}
+
+	if (status & UMAC_IRQ_TXDMA_DONE) {
+		printk("my_isr0(): It's tx\n");
+		my_tx_ring16_int_disable(priv);
+	}
 
 
 	return IRQ_HANDLED;

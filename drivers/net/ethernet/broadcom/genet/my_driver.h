@@ -26,6 +26,7 @@ struct my_hw_params {
 	unsigned int words_per_bd;
 	// リングの数
 	u8		rx_queues;
+	u8		tx_queues;
 	// リングに用意されているバッファディスクリプタの数
 	u8		rx_bds_per_q;
 };
@@ -236,6 +237,23 @@ static inline void my_rdma_writel(struct my_priv *priv, u32 val, enum dma_reg re
 		__raw_writel(val, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);	
 	else								
 		writel_relaxed(val, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);		
+}
+
+// tdmaレジスタブロックからの読み取りを行う
+static inline u32 my_tdma_readl(struct my_priv *priv, enum dma_reg reg_type)
+{	
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN)) 
+		return __raw_readl(priv->base + GENET_TDMA_REG_OFF + DMA_RINGS_SIZE + bcmgenet_dma_regs[reg_type]);		
+	else								
+		return readl_relaxed(priv->base + GENET_TDMA_REG_OFF + DMA_RINGS_SIZE + bcmgenet_dma_regs[reg_type]);	
+}
+// tdmaレジスタブロックへの書き込みを行う
+static inline void my_tdma_writel(struct my_priv *priv, u32 val, enum dma_reg reg_type)
+{									
+	if (IS_ENABLED(CONFIG_MIPS) && IS_ENABLED(CONFIG_CPU_BIG_ENDIAN))
+		__raw_writel(val, priv->base + GENET_TDMA_REG_OFF + DMA_RINGS_SIZE + bcmgenet_dma_regs[reg_type]);	
+	else								
+		writel_relaxed(val, priv->base + GENET_TDMA_REG_OFF + DMA_RINGS_SIZE + bcmgenet_dma_regs[reg_type]);		
 }
 
 // rx ringレジスタブロックからの読み取りを行う
