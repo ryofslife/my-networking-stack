@@ -534,6 +534,7 @@ static irqreturn_t my_isr0(int irq, void *dev_id)
 {
 	// my_privへの型変換
 	struct my_priv *priv = (struct my_priv *)dev_id;
+	struct my_rx_ring *rx_ring;
 	unsigned int status;
 	
 	// 割り込みがあった
@@ -550,22 +551,22 @@ static irqreturn_t my_isr0(int irq, void *dev_id)
 		printk("my_isr0(): RX DMA not yet completed...\n");
 	}
 
+	rx_ring = &priv->rx_rings[DESC_INDEX];
 	// 割り込みを一定時間無効化する
 	rx_ring->int_disable(rx_ring);
 	// 10秒
 	msleep(1000);
 	// 割り込みを有効化する
-	ring->int_enable(ring);
+	rx_ring->int_enable(rx_ring);
 
 
 	return IRQ_HANDLED;
 }
-// 優先受信ハンドラを用意する
+// 優先受信ハンドラを用意する、基本呼ばれないはず
 static irqreturn_t my_isr1(int irq, void *dev_id)
 {
 	// my_privへの型変換
 	struct my_priv *priv = (struct my_priv *)dev_id;
-	struct my_rx_ring *rx_ring;
 	unsigned int status;
 	
 	// 割り込みがあった
@@ -582,14 +583,6 @@ static irqreturn_t my_isr1(int irq, void *dev_id)
 	} else {
 		printk("my_isr1(): RX DMA not yet completed...\n");
 	}
-
-	// 割り込みを一定時間無効化する
-	rx_ring->int_disable(rx_ring);
-	// 10秒
-	msleep(1000);
-	// 割り込みを有効化する
-	ring->int_enable(ring);
-
 
 	return IRQ_HANDLED;
 }
