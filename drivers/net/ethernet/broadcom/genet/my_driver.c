@@ -555,7 +555,7 @@ static irqreturn_t my_isr0(int irq, void *dev_id)
 	// 割り込みを一定時間無効化する
 	rx_ring->int_disable(rx_ring);
 	// delay
-	udelay(100)
+	mdelay(100)
 	// atomicコンテキストで使えない
 	// msleep(1000); 
 	// 割り込みを有効化する
