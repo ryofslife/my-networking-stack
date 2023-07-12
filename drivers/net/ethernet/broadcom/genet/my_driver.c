@@ -538,24 +538,26 @@ static irqreturn_t my_isr0(int irq, void *dev_id)
 	unsigned int status;
 	
 	// 割り込みがあった
-	printk("my_isr0(): Hi there, there was an regular interrupt\n");
+	// printk("my_isr0(): Hi there, there was an regular interrupt\n");
 
 	// 割り込みbitsの状態を確認する
 	status = my_intrl2_0_readl(priv, INTRL2_CPU_STAT) & ~my_intrl2_0_readl(priv, INTRL2_CPU_MASK_STATUS);
 	// 割り込み状態からの解放、しないと延々と割り込みが入り続ける現象が発生する、している
 	my_intrl2_0_writel(priv, status, INTRL2_CPU_CLEAR);
 	// dmaが完了しているかを確認する
-	if (status & UMAC_IRQ_RXDMA_DONE) {
-		printk("my_isr0(): RX DMA completed. Packets are waiting!\n");
-	} else {
-		printk("my_isr0(): RX DMA not yet completed...\n");
-	}
+	// if (status & UMAC_IRQ_RXDMA_DONE) {
+	// 	printk("my_isr0(): RX DMA completed. Packets are waiting!\n");
+	// } else {
+	// 	printk("my_isr0(): RX DMA not yet completed...\n");
+	// }
 
 	rx_ring = &priv->rx_rings[DESC_INDEX];
 	// 割り込みを一定時間無効化する
 	rx_ring->int_disable(rx_ring);
-	// 10秒
-	msleep(1000);
+	// delay
+	udelay(100)
+	// atomicコンテキストで使えない
+	// msleep(1000); 
 	// 割り込みを有効化する
 	rx_ring->int_enable(rx_ring);
 
