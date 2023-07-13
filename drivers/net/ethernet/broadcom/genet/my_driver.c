@@ -235,6 +235,8 @@ static void my_set_rx_coalesce(struct my_rx_ring *ring, u32 usecs, u32 pkts)
 	unsigned int i = ring->index;
 	u32 reg;
 
+	printk("my_set_rx_coalesce(): setting rx coalescing engine");
+
 	my_rdma_ring_writel(priv, i, pkts, DMA_MBUF_DONE_THRESH);
 
 	reg = my_rdma_readl(priv, DMA_RING0_TIMEOUT + i);
@@ -360,6 +362,8 @@ static int my_init_rx_ring(struct my_priv *priv, unsigned int index, unsigned in
 	// 設定したパラメータに基づいてcoalescing engineをチューニング
 	my_set_rx_coalesce(ring, ring->rx_coalesce_usecs, ring->rx_max_coalesced_frames);
 
+	printk("my_init_rx_ring(): writing into the rdma ring register block");
+
 	my_rdma_ring_writel(priv, index, 0, RDMA_PROD_INDEX);
 	my_rdma_ring_writel(priv, index, 0, RDMA_CONS_INDEX);
 	my_rdma_ring_writel(priv, index, ((size << DMA_RING_SIZE_SHIFT) | RX_BUF_LENGTH), DMA_RING_BUF_SIZE);
@@ -422,6 +426,7 @@ static int my_init_rx_queues(struct net_device *dev)
 
 	/* Enable rings */
 	// control and statusレジスタに書き込む、受信リングバッファを有効化
+	printk("my_init_rx_queues(): writing into the DMA_RING_CFG register");
 	my_rdma_writel(priv, ring_cfg, DMA_RING_CFG);
 
 	// re有効化している
@@ -429,6 +434,7 @@ static int my_init_rx_queues(struct net_device *dev)
 		printk("my_init_rx_queues(): dma is enabled");
 		dma_ctrl |= DMA_EN;
 	}
+	printk("my_init_rx_queues(): writing into the DMA_CTRL register");
 	my_rdma_writel(priv, dma_ctrl, DMA_CTRL);
 
 	return 0;
@@ -440,25 +446,6 @@ static u32 my_disable_dma(struct my_priv *priv)
 	unsigned int i;
 	u32 reg;
 	u32 dma_ctrl;
-	// enum dma_reg reg_type;
-	// u32 dbg;
-	
-	// reg_type = DMA_CTRL;
-	
-	// // ベースアドレス + dma channel 2へのoffset + 受信リングバッファ分のoffset + 0x04(dmaコントローラ分のoffset)
-	// // の番地のbits状態を読み込む
-	// dma_ctrl = 1 << (DESC_INDEX + DMA_RING_BUF_EN_SHIFT) | DMA_EN;
-
- 	// reg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
-	// reg &= ~dma_ctrl;
-	// printk("my_disable_dma(): the value written to the dma ctrl address is %u\n", reg);
-
-	// // の番地にマスクしたbitsを書き込む
-	// my_writel(reg, priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
-
-	// // 書き込んだ値を読み込んでみる
-	// // dbg = my_readl(priv->base + GENET_RDMA_REG_OFF + DMA_RINGS_SIZE + my_dma_regs[reg_type]);
-	// // printk("my_disable_dma(): reading the value previously written to the dma ctrl address is %u\n", dbg);
 
 	/* disable DMA */
 	// rx/tx共に無効化する
@@ -717,6 +704,9 @@ static int my_open(struct net_device *ndev)
 	char *isr0 = "warikomi0";
 	char *isr1 = "warikomi1";
 
+	// クロックを有効化する
+	clk_prepare_enable(priv->clk);
+
 	// macをリセットする
 	my_umac_reset(priv);
 
@@ -732,6 +722,9 @@ static int my_open(struct net_device *ndev)
 		printk("my_open(): failed to initialize DMA\n");
 		return -1;
 	}
+
+	// dmaコントローラを有効化する
+	my_enable_dma(priv, dma_ctrl);
 	
 	// irqの登録を行う
  	ret = request_irq(priv->irq0, my_isr0, IRQF_SHARED, isr0, priv);
@@ -747,9 +740,6 @@ static int my_open(struct net_device *ndev)
 		return -1;
 	}
 	printk("my_open(): successfully registered my receive handler\n");
-
-	// dmaコントローラを有効化する
-	my_enable_dma(priv, dma_ctrl);
 
 	// phyデバイスをセットアップする
 	ret = bcmgenet_mii_probe(ndev);
@@ -821,6 +811,7 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	// ハード固有のパラメータ
 	struct my_hw_params *hw_params;
 	
+	int ops;
 	int oops;
 	int ooops;
 	
@@ -893,7 +884,20 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	SET_NETDEV_DEV(ndev, &pdev->dev);
 	// 物理デバイスに対して仮想デバイスを紐づける
 	dev_set_drvdata(&pdev->dev, ndev);
+
+	// クロックを取得する
+	priv->clk = devm_clk_get_optional(&priv->pdev->dev, "enet");
+	if (IS_ERR(priv->clk)) {
+		printk("my_platform_device_probe(): failed to get the clock");
+		goto err;
+	}
 	
+	// クロックを有効化する
+	ops = clk_prepare_enable(priv->clk);
+	if (ops) {
+		goto err;
+	}
+
 	// privにhwパラメータを置いておく
 	priv->hw_params = my_set_hw_params(hw_params);
 	
@@ -938,6 +942,9 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	priv->hw_params->rx_queues = ndev->real_num_rx_queues;
 	printk("my_platform_device_probe(): the number of rx queue is %u\n", priv->hw_params->rx_queues);
 	
+	// クロックを無効化する
+	clk_disable_unprepare(priv->clk);
+
 	// 一通りできたら以下を呼ぶ
 	ooops = register_netdev(ndev);
 	if (ooops)

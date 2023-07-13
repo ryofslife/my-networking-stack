@@ -125,6 +125,8 @@ struct my_priv {
 	unsigned int rx_buf_len;
 	// バッファディスクリプタの番地
 	void __iomem *rx_bds;
+	// ethernetクロック
+	struct clk *clk;
 	
 	// その他
 	bool internal_phy;
