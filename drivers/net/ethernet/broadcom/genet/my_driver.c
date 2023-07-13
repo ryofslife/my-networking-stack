@@ -885,19 +885,6 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	// 物理デバイスに対して仮想デバイスを紐づける
 	dev_set_drvdata(&pdev->dev, ndev);
 
-	// クロックを取得する
-	priv->clk = devm_clk_get_optional(&priv->pdev->dev, "enet");
-	if (IS_ERR(priv->clk)) {
-		printk("my_platform_device_probe(): failed to get the clock");
-		goto err;
-	}
-	
-	// クロックを有効化する
-	ops = clk_prepare_enable(priv->clk);
-	if (ops) {
-		goto err;
-	}
-
 	// privにhwパラメータを置いておく
 	priv->hw_params = my_set_hw_params(hw_params);
 	
@@ -914,6 +901,19 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	
 	// etherコントローラのphy-modeを吐かせる
 	printk(KERN_INFO "phy-mode: %d\n", device_get_phy_mode(&pdev->dev));
+
+	// クロックを取得する
+	priv->clk = devm_clk_get_optional(&priv->pdev->dev, "enet");
+	if (IS_ERR(priv->clk)) {
+		printk("my_platform_device_probe(): failed to get the clock");
+		goto err;
+	}
+	
+	// クロックを有効化する
+	ops = clk_prepare_enable(priv->clk);
+	if (ops) {
+		goto err;
+	}
 	
 	// mii起動するまでのqueueを初期化
 	init_waitqueue_head(&priv->wq);
