@@ -128,6 +128,16 @@ static inline void my_tx_ring16_int_disable(struct my_priv *priv)
 	my_intrl2_0_writel(priv, UMAC_IRQ_TXDMA_DONE, INTRL2_CPU_MASK_SET);
 }
 
+// 割り込みを無効化する
+static void my_intr_disable(struct my_priv *priv)
+{
+	/* Mask all interrupts.*/
+	my_intrl2_0_writel(priv, 0xFFFFFFFF, INTRL2_CPU_MASK_SET);
+	my_intrl2_0_writel(priv, 0xFFFFFFFF, INTRL2_CPU_CLEAR);
+	my_intrl2_1_writel(priv, 0xFFFFFFFF, INTRL2_CPU_MASK_SET);
+	my_intrl2_1_writel(priv, 0xFFFFFFFF, INTRL2_CPU_CLEAR);
+}
+
 // コントロールブロックに割り当てたリソースを解放する
 static struct sk_buff *my_free_rx_cb(struct device *dev, struct enet_cb *cb)
 {
@@ -290,8 +300,8 @@ static void init_umac(struct my_priv *priv)
 
 	reset_umac(priv);
 
-	// 受信カウンタをリセットする
-	my_umac_writel(priv, MIB_RESET_RX | MIB_RESET_RUNT, UMAC_MIB_CTRL);
+	// 送信・受信カウンタをリセットする
+	my_umac_writel(priv, MIB_RESET_RX | MIB_RESET_TX | MIB_RESET_RUNT, UMAC_MIB_CTRL);
 	// 受信カウンタを初期化する
 	my_umac_writel(priv, 0, UMAC_MIB_CTRL);
 
@@ -302,6 +312,8 @@ static void init_umac(struct my_priv *priv)
 	reg = my_rbuf_readl(priv, RBUF_CTRL);
 	reg |= RBUF_64B_EN;
 	my_rbuf_writel(priv, reg, RBUF_CTRL);
+
+	my_intr_disable(priv);
 
 	// MDIOを有効化して、phyがmacに対して割り込みを行えるようにする
 	int0_enable |= (UMAC_IRQ_MDIO_DONE | UMAC_IRQ_MDIO_ERROR);
@@ -747,6 +759,8 @@ static int my_open(struct net_device *ndev)
 		netdev_err(ndev, "failed to connect to PHY\n");
 		return -1;
 	}
+
+	bcmgenet_phy_pause_set(ndev, priv->rx_pause, priv->tx_pause);
 	
 	// phy,mac,ringなどなど割り込みを発生させるのに必要なコンポーネントを有効化する
 	my_netif_start(ndev);
@@ -851,6 +865,11 @@ static int my_platform_device_probe(struct platform_device *pdev)
 	} else {
 		printk("my_platform_device_probe(): successfully got the irq1 of %d\n", priv->irq1);
 	}
+
+	/* Set default pause parameters */
+	priv->autoneg_pause = 1;
+	priv->tx_pause = 1;
+	priv->rx_pause = 1;
 	
 	// mmioのベースアドレスを取得、このタイミングではまだ物理アドレスなので仮想アドレスに変換する必要がある
 	rsc = platform_get_resource(pdev, IORESOURCE_MEM, 0);
